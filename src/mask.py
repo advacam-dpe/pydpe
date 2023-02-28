@@ -13,8 +13,8 @@ import sys
 #Variables
 #===========================================================================
 
-rejection_const = 	5000
-file_in_path_name = "/mnt/MainDisk/Soubory/Programy/Vlastni/c++/aplikace/DataProcessing/Processing/DPE/Devel/Test/Histograms/2D/ClusterSensorPlots/ClusterPlotEnergy_Integrated.txt"
+rejection_const = 	1000000000
+file_in_path_name = "/run/media/lukasm/10ABE5A17D6AED39/Work/Data/Meas/2022_CdTe1mm_TPX/electron/polystyrene/nofoil/ClusterSensorPlots/ClusterPlotEnergy_Integrated.txt"
 file_out_path = 	"../devel/out/mask/"
 file_out_name = 	"Mask.txt"
 
@@ -68,9 +68,10 @@ def mask_matrix(matrix, rejection_const):
 	return matrix_mask
 
 def plot_matrix(matrix, file_out_path_name):
-	fig = plt.figure(num=None, figsize=(8, 6), dpi=300, facecolor='w', edgecolor='k')
+	fig = plt.figure(num=None, figsize=(4, 4), dpi=300, facecolor='w', edgecolor='k')
 	plt.imshow(matrix, cmap = 'cividis', aspect = 'auto', origin='lower')
 	#plt.show()
+	plt.colorbar()
 	plt.savefig(file_out_path_name)
 	plt.close()
 
@@ -97,6 +98,10 @@ if __name__ == '__main__':
 	matrix = load_matrix(file_in_path_name)
 	plot_matrix(matrix, file_out_path + "matrix_integ_no_mask.png")
 	matrix_mask = mask_matrix(matrix, rejection_const)
-	print(matrix_mask)
-	# plot_matrix(matrix_mask, file_out_path + "matrix_integ_mask.png")
-	# export_mask(matrix_mask, file_out_path + file_out_name)
+
+	plot_matrix(matrix*matrix_mask, file_out_path + "matrix_integ_after_mask.png")
+
+
+	# # print(matrix_mask)
+	# # plot_matrix(matrix_mask, file_out_path + "matrix_integ_mask.png")
+	export_mask(matrix_mask, file_out_path + file_out_name)
