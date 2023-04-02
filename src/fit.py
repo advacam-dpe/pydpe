@@ -16,7 +16,6 @@ import pandas as pd
 from scipy.optimize import curve_fit
 from scipy import special
 
-sys.path.append("/mnt/MainDisk/Soubory/Programy/Vlastni/python/aplikace/advacam/dpe/src/")
 import hist1d as hs
 
 

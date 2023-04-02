@@ -4,7 +4,6 @@ import numpy as np
 import math
 from math import factorial
 import sys
-sys.path.append("/mnt/MainDisk/Soubory/Programy/Vlastni/python/aplikace/advacam/dpe/src/")
 import fit as ft
 
 class hist1d(object):
@@ -80,6 +79,7 @@ class hist1d(object):
           return True
 
      def fill(self, num):
+          print("still not implemented")
           return
 
      def fill_np(self, array):
@@ -124,26 +124,39 @@ class hist1d(object):
           self.x_range_width =  self.x_range[1] - self.x_range[0]
           return self.x_range
 
-     def plot(self, color = "C0", do_show = True, do_zoom = False, do_log_x = False, do_log_y  = False):
+     def plot(self, color = "C0", do_show = True, do_zoom = False, do_log_x = False, do_log_y  = False, ax=None):
           bin_conts_ext = np.append(self.bin_conts, 0)   
 
-          plt.hist(x=self.low_edges, bins=self.low_edges, weights=bin_conts_ext, color=color, histtype='step', 
-                         linewidth=1.6, label=self.name, alpha = 0.8)
+          if len(bin_conts_ext) != len(self.low_edges):
+               print("Error in plot of hist. Bin conts should have the same size edges of bins:" + str(len(bin_conts_ext)) + ", " + str(len(self.low_edges)))
+               return
+
+          if ax == None: 
+               fig, ax = plt.subplots(1,1, sharex=False)
+               
+          ax.hist(x=self.low_edges, bins=self.low_edges, weights=bin_conts_ext, color=color, 
+                    histtype='step', linewidth=1.6, label=self.name, alpha = 0.8)
 
           self.xrange()
           self.bin_cont_max()
 
-          plt.ylim(ymin=0, ymax = self.ymax*1.2) 
-          plt.xlim(xmin=self.x_range[0]-0.1*self.x_range_width, xmax = self.x_range[1]+0.1*self.x_range_width)
-          plt.legend()
-          plt.grid(visible = True, color ='grey',  linestyle ='-.', linewidth = 0.5,  alpha = 0.6)
-          plt.xlabel(self.axis_labels[0], fontsize=12) 
-          plt.ylabel(self.axis_labels[1], fontsize=12) 
-          plt.title(self.title)    
+          x_min_val = self.x_range[0] - 0.1*self.x_range_width
+          x_max_val = self.x_range[1] + 0.1*self.x_range_width
+          if x_max_val == x_min_val:
+               x_min_val = x_min_val - 1
+               x_max_val = x_max_val + 1
+
+          ax.set_ylim(ymin = 0, ymax = self.ymax*1.2) 
+          ax.set_xlim(xmin = x_min_val, xmax = x_max_val)
+          ax.legend()
+          ax.grid(visible = True, color ='grey',  linestyle ='-.', linewidth = 0.5,  alpha = 0.6)
+          ax.set_xlabel(self.axis_labels[0], fontsize=12) 
+          ax.set_ylabel(self.axis_labels[1], fontsize=12) 
+          ax.set_title(self.title)    
           if do_log_y:
-               plt.yscale('log')
+               ax.yscale('log')
           if do_log_x:
-               plt.xscale('log') 
+               ax.xscale('log') 
 
           if do_show:
                plt.show()          
@@ -275,7 +288,7 @@ class hist1d(object):
 
 if __name__ == '__main__':
 
-     case = 20
+     case = 100
 
      if case == 0:
 
@@ -337,20 +350,24 @@ if __name__ == '__main__':
           mu, sigma = 20, 5 
           data = np.append(data, np.random.normal(mu, sigma, n_points))
 
+          fig, ax = plt.subplots(1,1, sharex=False)
+
           hist2 = hist1d(hist_low_edges) 
           hist2.name = "smooth mean: " + str(smooth_mean_n)
           hist2.fill_np(data)
           hist2.smooth_mean(smooth_mean_n)
-          hist2.plot(color = "C1", do_show = False)
+          hist2.plot(color = "C1", do_show = False, ax=ax)
 
           hist3 = hist1d(hist_low_edges) 
           hist3.name = "smooth pol: r = " + str(smooth_pol_polord) + " w = " + str(smooth_pol_window)
           hist3.fill_np(data)
           hist3.smooth_pol(smooth_pol_window, smooth_pol_polord)
-          hist3.plot(color = "C3", do_show = False)
+          hist3.plot(color = "C3", do_show = False, ax=ax)
 
           hist1 = hist1d(xmin = min_val, xmax = max_val, nbin = nbin)
           hist1.name = "raw" 
           hist1.title = "Smootinhg of hist with polynom and mean methods"      
           hist1.fill_np(data)
-          hist1.plot(color = "C0")
+          hist1.plot(color = "C0", do_show = False, ax=ax)
+
+          plt.show()

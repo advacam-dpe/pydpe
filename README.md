@@ -2,7 +2,7 @@ DPE Python Post-processing
 ===============================================================
 Version:            ---
 Date:               ---
-Author:             Lukas Marek (lukas.marek@advacam.com) 
+Author:             Lukas Marek (lukas.marek@advacam.cz) 
 
 -------------------------------------------------------------------------------
 Introduction
