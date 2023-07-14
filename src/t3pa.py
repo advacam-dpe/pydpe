@@ -9,18 +9,21 @@ import sys
 import pandas as pd
 import hist1d as ht1d
 from tqdm import tqdm
+from matplotlib.colors import LogNorm
 
-class elist(object):
-	"""docstring for elist"""
-	def __init__(self, filein_path_name = "", usecols=None, nrows=None):
-		super(elist, self).__init__()
+
+
+class t3pa(object):
+	"""docstring for t3pa"""
+	def __init__(self, filein_path_name = ""):
+		super(t3pa, self).__init__()
 
 		rc = 0
 
 		self.basic_init()
 
 		if len(filein_path_name) != 0:
-			rc = self.load(filein_path_name, usecols, nrows)
+			rc = self.load(filein_path_name)
 
 		if rc:
 			print("Error occurred during initialization.")
@@ -30,7 +33,6 @@ class elist(object):
 		
 		self.data = pd.DataFrame()
 		self.var_keys = []
-		self.var_units = []
 		self.ncol = 0
 		self.separator = ""
 		self.nrow = 0
@@ -38,7 +40,7 @@ class elist(object):
 		self.dsc = ""
 
 
-	def load(self, file_path_name, usecols=None, nrows=None):
+	def load(self, file_path_name):
 		try:
 			with open(file_path_name, 'r') as file_in:
 				n_line = 0
@@ -46,8 +48,6 @@ class elist(object):
 					n_line += 1
 					if n_line == 1:
 						self.__find_separator(line)
-					if n_line == 2:
-						self.__load_units(line)
 					if n_line == 10:
 						break
 
@@ -64,9 +64,7 @@ class elist(object):
 
 					# iterate over the CSV file by reading it in chunks
 					with tqdm(total=total_rows-2, unit='line', unit_scale=True, desc='Loading data') as pbar:	
-						for chunk in pd.read_csv(file_path_name, chunksize=chunk_size, header=0, 
-													skiprows = [1], sep=self.separator, usecols=usecols,
-													nrows=nrows):
+						for chunk in pd.read_csv(file_path_name, chunksize=chunk_size, header=[0], sep=self.separator):
 							chunks.append(chunk)
 							pbar.update(len(chunk))
 
@@ -85,6 +83,15 @@ class elist(object):
 			print("Can not open file: " + file_path_name )	
 			return -1
 
+		index_max = np.max(self.data["Matrix Index"]) + 1
+		dim = 256
+
+		if index_max > 0:
+			dim = int(math.sqrt(index_max))
+
+		self.data['x'] = self.data['Matrix Index']%dim
+		self.data['y'] = self.data['Matrix Index']//dim	
+
 		return 0
 
 	def __find_separator(self, line):
@@ -99,15 +106,10 @@ class elist(object):
 			self.separator = separator
 		return separator
 
-	def __load_units(self, line):
-		line = line.replace("\n", "")
-		self.var_units = line.split(self.separator)
-
 	def print(self):
-		print("Elist")
+		print("t3pa")
 		if len(self.filein_path_name): print("File:", self.filein_path_name)
 		print("VarKeys:", self.var_keys)
-		print("VarUnits:", self.var_units)
 		print(self.data) 
 
 	def plot(self, var_key, nbin = 100, do_show = True, ax=None):
@@ -155,93 +157,87 @@ class elist(object):
 			self.data = data_filter
 		return data_filter
 
-	def randomize(self, do_reset_idx = False, keep_data = False):
-		data_rand = pd.DataFrame()
+	def sensor_map(self, val_index ):
 
-		if not do_reset_idx:
-			data_rand = self.data.sample(frac=1)
-		else:
-			data_rand = self.data.sample(frac=1).reset_index(drop=True)
+		if val_index > self.nrow-1:
+			return np.array([[-1]])
 
-		if keep_data:
-			data = data_rand
-		return data_rand
+		dim = 256
 
-	def analyse_coincidence(self):
+		index_max = np.max(self.data["Matrix Index"]) + 1
 
-		coinc_clm = np.empty(self.nrow)
-		coinc_clm[0] = 0
+		if index_max > 0:
+			dim = int(math.sqrt(index_max))
 
-		t_coinc = 100 	#ns
-		t_curr = -1
-		t_main = self.data.loc[0, "T"] + t_coinc + 1
-		coinc_id_curr = 0
-
-		correct = True
-		do_comp = False
-		if "EventID" in self.var_keys:
-			do_comp = True
+		matrix = np.zeros((dim, dim))
 
 		for index, row in self.data.iterrows():
-			if index == 0:
-				continue
+			matrix[row[7],row[6]] += row[val_index]
 
-			t_curr = row[5]
-			if t_curr - t_main > t_coinc:
-				coinc_id_curr += 1
-				t_main = t_curr
-			
-			# print(index, t_curr, t_main, coinc_id_curr, int(row[1]), coinc_id_curr - int(row[1]))
+		return matrix
 
-			if do_comp and coinc_id_curr - int(row[1]) != 0:
-				break
-				correct = False
 
-			coinc_clm[index] = coinc_id_curr
+	def plot_matrix(self, matrix, file_out_path_name, do_log_z = False, names = [], values = []):
+		
+		# fig, ax = plt.subplots()
+		fig = plt.figure(num=None, facecolor='w', edgecolor='k')
+		ax = fig.add_subplot(111)
+		if do_log_z:
+			plt.imshow(matrix, cmap = 'viridis', aspect = 'auto', origin='lower', norm=LogNorm())
+		else:
+			plt.imshow(matrix, cmap = 'viridis', aspect = 'auto', origin='lower')		
+		plt.colorbar()
+		plt.axis('square')
 
-		if do_comp and correct:
-			print("Event ID is already correct with coinc window ", t_coinc)
+		if len(names) != 0:
+			props = dict(boxstyle='round', facecolor='white', alpha=0.7, linewidth=0 )
+			plt.subplots_adjust(right=0.65)
+			fig = plt.gcf()
+			fig.set_size_inches(7.5, 4.4)
 
-		return coinc_clm
+			x_par_step = 1./30.;
+			if len(names) > 30:
+				x_par_step = 1./float(len(names))
+			i = 0
+
+			name_width = max(len(name) for name in names)
+			value_width = 1  # adjust as needed
+			# text_str = '\n'.join([f'{key:<{name_width}} = {value:>{value_width}.2f}' for key, value in zip(names, values)])
+			text_str = ""
+			text_str = '\n'.join([f'{key:<{name_width}} = {value:>{value_width}}' for key, value in zip(names, values)])
+
+			plt.text(1.4, 0.5 , text_str, multialignment='left', transform=ax.transAxes, 
+					alpha=0.7, bbox=props, fontsize=7, family='DejaVu Sans Mono')
+
+
+
+		plt.show()
+		# plt.savefig(file_out_path_name)
+		# plt.close()
+
+def PlotGraph1D(ListX, ListY):
+	#Main plot function
+	plt.plot(ListX, ListY, color='gainsboro', linewidth=0,
+		marker='o', markerfacecolor='dodgerblue', markeredgewidth=0,
+		markersize=1)
+	plt.show()
 
 
 if __name__ == '__main__':
 	
-	# filein_path_name = "./devel/test/elist/data/EventListExt.advelist"
-	# elist_1 = elist(filein_path_name)
-	# elist_1.print()
-	# # elist_1.plot("E")
-	# elist_1.plot_all()
+	# filein_path_name = "./devel/test/t3pa/in/MASK_tot_toa.t3pa"
+	# filein_path_name = "/mnt/MainDisk/Soubory/Programy/Vlastni/c++/aplikace/DataProcessing/Processing/DPE/Test/out/test_009/File/MASK_tot_toa.t3pa"
+	# t3pa_file = t3pa(filein_path_name)
+	# t3pa_file.print()
+	# # t3pa_file.plot("Matrix Index")
+	# # t3pa_file.plot_all()
+	# sensor_matrix = t3pa_file.sensor_map(3)
+	# t3pa_file.plot_matrix(sensor_matrix, "", True)
 
 
-	# filein_path_name = "./devel/test/elist/data/ExtElist.txt"
-	# elist_2 = elist(filein_path_name)
-	# elist_2.print()
-	# # elist_2.plot("E")	
-	# elist_2.plot_all()
+	t3pa_file = t3pa("/mnt/MainDisk/Soubory/Analysis/MinipixToA/data/l06_co60_60s_thl5keV.t3pa")
+	t3pa_file.print()
 
 
-	# filein_path_name = "/mnt/MainDisk/Soubory/Programy/Vlastni/c++/aplikace/DataProcessing/PreProcessing/Coincidence_Matching/Devel/Test/LargeFile/ElistAll.advelist"
-	# elist_1 = elist(filein_path_name)
-	# elist_1.print()
-	# is_increasing = elist_1.data["T"].is_monotonic_increasing
-	# print(is_increasing)
-	# coinc_cml = elist_1.analyse_coincidence()
-	# print(len(coinc_cml), len(elist_1.data["T"]))
-
-
-	filein_path_name = "/mnt/MainDisk/Soubory/Programy/Vlastni/c++/aplikace/DataProcessing/Processing/DPE/Test/ref/test_018/File/EventList.advelist"
-	elist_1 = elist(filein_path_name, ["T", "EventID"], 1000)
-	elist_1.print()
-	plt.plot(elist_1.data["EventID"], elist_1.data["T"], color='gainsboro', linewidth=1,
-	     marker='o', markerfacecolor='dodgerblue', markeredgewidth=0,
-	     markersize=3)
-	plt.show()
-	plt.close()
-
-
-
-
-
-
+	PlotGraph1D(t3pa_file.data["Index"], t3pa_file.data["ToA"]*25)
 
