@@ -10,10 +10,10 @@ import pandas as pd
 import hist1d as ht1d
 from tqdm import tqdm
 
-class elist(object):
-	"""docstring for elist"""
+class clist(object):
+	"""docstring for clist"""
 	def __init__(self, filein_path_name = "", usecols=None, nrows=None, do_print=True):
-		super(elist, self).__init__()
+		super(clist, self).__init__()
 
 		rc = 0
 
@@ -112,7 +112,7 @@ class elist(object):
 		self.var_units = line.split(self.separator)
 
 	def print(self):
-		print("Elist")
+		print("clist")
 		if len(self.filein_path_name): print("File:", self.filein_path_name)
 		print("VarKeys:", self.var_keys)
 		print("VarUnits:", self.var_units)
@@ -146,7 +146,8 @@ class elist(object):
 		for i in range(self.ncol):
 			i_y = int(i/dim_x)
 			i_x = i - i_y*dim_x
-			self.plot(self.var_keys[i], ax=axs[i_y,i_x], do_show=False)
+			if self.var_keys[i] != "ClusterID" and self.var_keys[i] != "ClusterPixels":
+				self.plot(self.var_keys[i], ax=axs[i_y,i_x], do_show=False)
 
 		fig_size_x = 4.5 * dim_x;
 		fig_size_y = 2.7 * dim_y;
@@ -215,37 +216,28 @@ class elist(object):
 
 if __name__ == '__main__':
 	
-	# filein_path_name = "./devel/test/elist/data/EventListExt.advelist"
-	# elist_1 = elist(filein_path_name)
-	# elist_1.print()
-	# # elist_1.plot("E")
-	# elist_1.plot_all()
+	filein_path_name = "./devel/test/clist/data/elist_t3pa.clist"
+	clist_1 = clist(filein_path_name)
+	clist_1.print()
+	# clist_1.plot("E")
+	clist_1.plot_all()
 
 
-	# filein_path_name = "./devel/test/elist/data/ExtElist.txt"
-	# elist_2 = elist(filein_path_name)
-	# elist_2.print()
-	# # elist_2.plot("E")	
-	# elist_2.plot_all()
+	# filein_path_name = "./devel/test/clist/data/Extclist.txt"
+	# clist_2 = clist(filein_path_name)
+	# clist_2.print()
+	# # clist_2.plot("E")	
+	# clist_2.plot_all()
 
 
-	# filein_path_name = "/mnt/MainDisk/Soubory/Programy/Vlastni/c++/aplikace/DataProcessing/PreProcessing/Coincidence_Matching/Devel/Test/LargeFile/ElistAll.advelist"
-	# elist_1 = elist(filein_path_name)
-	# elist_1.print()
-	# is_increasing = elist_1.data["T"].is_monotonic_increasing
+	# filein_path_name = "/mnt/MainDisk/Soubory/Programy/Vlastni/c++/aplikace/DataProcessing/PreProcessing/Coincidence_Matching/Devel/Test/LargeFile/clistAll.advclist"
+	# clist_1 = clist(filein_path_name)
+	# clist_1.print()
+	# is_increasing = clist_1.data["T"].is_monotonic_increasing
 	# print(is_increasing)
-	# coinc_cml = elist_1.analyse_coincidence()
-	# print(len(coinc_cml), len(elist_1.data["T"]))
+	# coinc_cml = clist_1.analyse_coincidence()
+	# print(len(coinc_cml), len(clist_1.data["T"]))
 
-
-	filein_path_name = "/mnt/MainDisk/Soubory/Programy/Vlastni/c++/aplikace/DataProcessing/Processing/DPE/Test/ref/test_018/File/EventList.advelist"
-	elist_1 = elist(filein_path_name,  nrows=1000, do_print=False)
-	elist_1.print()
-	plt.plot(elist_1.data["EventID"], elist_1.data["T"], color='gainsboro', linewidth=1,
-	     marker='o', markerfacecolor='dodgerblue', markeredgewidth=0,
-	     markersize=3)
-	plt.show()
-	plt.close()
 
 
 

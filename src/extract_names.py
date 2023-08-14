@@ -13,8 +13,8 @@ import sys
 #Variables
 #===========================================================================
 
-file_in_path_name = "/mnt/MainDisk/Soubory/Programy/Vlastni/python/aplikace/advacam/DPE/in/extract_names/names_cpp.cpp"
-file_out_path = 	"/mnt/MainDisk/Soubory/Programy/Vlastni/python/aplikace/advacam/DPE/out/extract_names/"
+file_in_path_name = "/mnt/MainDisk/Soubory/Programy/Vlastni/python/aplikace/advacam/dpe/devel/in/extract_names/names_cpp.cpp"
+file_out_path = 	"/mnt/MainDisk/Soubory/Programy/Vlastni/python/aplikace/advacam/dpe/devel/out/extract_names/"
 file_out_name = 	"names.txt"
 
 #===========================================================================
