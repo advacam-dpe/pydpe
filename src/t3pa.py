@@ -235,9 +235,23 @@ if __name__ == '__main__':
 	# t3pa_file.plot_matrix(sensor_matrix, "", True)
 
 
-	t3pa_file = t3pa("/mnt/MainDisk/Soubory/Analysis/MinipixToA/data/l06_co60_60s_thl5keV.t3pa")
+	t3pa_file = t3pa("/home/lukas/test/tot_toa.t3pa")
 	t3pa_file.print()
 
+	prev_overflow = -1 
+	prev_row = None
 
-	PlotGraph1D(t3pa_file.data["Index"], t3pa_file.data["ToA"]*25)
+	for index, row in t3pa_file.data.iterrows():
+		overflow = row['Overflow']
+
+		if overflow == 1 and prev_overflow == 1:
+			print(prev_row)
+			print(row)
+			print("-------------")
+
+		prev_overflow = overflow
+		prev_row = row
+
+
+	PlotGraph1D(t3pa_file.data["Index"], t3pa_file.data["Overflow"])
 

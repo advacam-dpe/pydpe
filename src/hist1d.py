@@ -288,8 +288,9 @@ class hist1d(object):
 
 if __name__ == '__main__':
 
-     case = 100
+     case = 20
 
+     # basics
      if case == 0:
 
           n_points = 10000
@@ -304,6 +305,7 @@ if __name__ == '__main__':
           hist1.fill_np(data)
           hist1.plot(color = "C0")
 
+     # fit 
      if case == 20:
           n_points = 100000
           mu, sigma = 50, 10 
@@ -331,7 +333,7 @@ if __name__ == '__main__':
           plt.show()          
 
 
-
+     # smoothing
      if case == 100:
           smooth_mean_n = 20
 

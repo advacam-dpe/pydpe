@@ -157,7 +157,6 @@ class clist(object):
 		if do_show:
 			plt.show()
 
-
 	def filter_data_frame(self, var_key, min_val, max_val, keep_data = False):
 		data_filter = self.data.loc[(self.data[var_key] >= min_val) & (self.data[var_key] <= max_val)] 	
 		if keep_data:
