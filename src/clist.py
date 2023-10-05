@@ -271,58 +271,12 @@ if __name__ == '__main__':
 
 			return pixels
 
-		def plot_cluster(cluster):
-			
-			if not cluster.any():
-				return
-
-			x_min = np.min(cluster[:, 0])
-			x_max = np.max(cluster[:, 0])
-			y_min = np.min(cluster[:, 1])
-			y_max = np.max(cluster[:, 1])			
-
-			binx = list(range(int(x_min),int(x_max)))
-			biny = list(range(int(y_min),int(y_max)))
-
-			fig, axs = plt.subplots(1, 3)
-
-			axs[0].hist2d(cluster[:, 0], cluster[:, 1], bins=(binx, biny), 
-						weights=cluster[:, 2], cmap='viridis',cmin = 1.000000)
-
-			axs[1].hist2d(cluster[:, 0], cluster[:, 1], bins=(binx, biny), 
-						weights=cluster[:, 3], cmap='viridis',cmin = 1.000000)
-
-			#  plot range
-			range_x = x_max - x_min
-			range_y = y_max - y_min
-
-			range_diff = abs(range_x - range_y)
-			if range_x > range_y:
-				axs[0].set_xlim(xmin=x_min - 1, xmax = x_max + 1)
-				axs[0].set_ylim(ymin=y_min - int(range_diff/2.) - 1, ymax = y_max + int(range_diff/2.) + 1 )
-				axs[1].set_xlim(xmin=x_min - 1, xmax = x_max + 1)
-				axs[1].set_ylim(ymin=y_min - int(range_diff/2.) - 1, ymax = y_max + int(range_diff/2.) + 1 )				
-			else:
-				axs[0].set_ylim(ymin=y_min - 1, ymax = y_max + 1)
-				axs[0].set_xlim(xmin=x_min - int(range_diff/2.) -1 , xmax = x_max + int(range_diff/2.) + 1 )				
-				axs[1].set_ylim(ymin=y_min - 1, ymax = y_max + 1)
-				axs[1].set_xlim(xmin=x_min - int(range_diff/2.) -1 , xmax = x_max + int(range_diff/2.) + 1 )				
-
-			plt.xlabel('X [-]')
-			plt.ylabel('Y [-]')
-			# plt.colorbar().set_label('E')
-			plt.title('Cluster')
-
-			fig = plt.gcf()
-			fig.set_size_inches(16,5)
-
-			plt.show()
 
 		cluster_377 = get_cluster(377, clist.data)
 
 		# print(cluster_377)
 
-		plot_cluster(cluster_377)
+		cluster_377.plot()
 
 
 
