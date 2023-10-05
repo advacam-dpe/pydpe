@@ -10,10 +10,10 @@ import pandas as pd
 import hist1d as ht1d
 from tqdm import tqdm
 
-class clist(object):
+class Clist(object):
 	"""docstring for clist"""
 	def __init__(self, filein_path_name = "", usecols=None, nrows=None, do_print=True):
-		super(clist, self).__init__()
+		super(Clist, self).__init__()
 
 		rc = 0
 
@@ -215,28 +215,114 @@ class clist(object):
 
 if __name__ == '__main__':
 	
-	filein_path_name = "./devel/test/clist/data/elist_t3pa.clist"
-	clist_1 = clist(filein_path_name)
-	clist_1.print()
-	# clist_1.plot("E")
-	clist_1.plot_all()
+	case = 4
 
+	if case == 1:
 
-	# filein_path_name = "./devel/test/clist/data/Extclist.txt"
-	# clist_2 = clist(filein_path_name)
-	# clist_2.print()
-	# # clist_2.plot("E")	
-	# clist_2.plot_all()
+		filein_path_name = "./devel/test/clist/data/elist_t3pa.clist"
+		clist_1 = Clist(filein_path_name)
+		clist_1.print()
+		# clist_1.plot("E")
+		clist_1.plot_all()
 
+	elif case == 2:
 
-	# filein_path_name = "/mnt/MainDisk/Soubory/Programy/Vlastni/c++/aplikace/DataProcessing/PreProcessing/Coincidence_Matching/Devel/Test/LargeFile/clistAll.advclist"
-	# clist_1 = clist(filein_path_name)
-	# clist_1.print()
-	# is_increasing = clist_1.data["T"].is_monotonic_increasing
-	# print(is_increasing)
-	# coinc_cml = clist_1.analyse_coincidence()
-	# print(len(coinc_cml), len(clist_1.data["T"]))
+		filein_path_name = "./devel/test/clist/data/Extclist.txt"
+		clist_2 = Clist(filein_path_name)
+		clist_2.print()
+		# clist_2.plot("E")	
+		clist_2.plot_all()
 
+	elif case == 3:
+
+		filein_path_name = "/mnt/MainDisk/Soubory/Programy/Vlastni/c++/aplikace/DataProcessing/PreProcessing/Coincidence_Matching/Devel/Test/LargeFile/clistAll.advclist"
+		clist_1 = Clist(filein_path_name)
+		clist_1.print()
+		is_increasing = clist_1.data["T"].is_monotonic_increasing
+		print(is_increasing)
+		coinc_cml = clist_1.analyse_coincidence()
+		print(len(coinc_cml), len(clist_1.data["T"]))
+
+	elif case == 4:
+
+		# filein_path_name = "./devel/test/clist/data/CListExt.clist"
+		filein_path_name = "/home/lukas/file/sw/cpp/data_proc/proc/dpe/test/out/test_034/File/CListExt.clist"
+
+		clist = Clist(filein_path_name)
+
+		# clist.print()
+		# print(clist.data["ClusterPixels"])
+
+		def get_cluster(cluster_id, data):
+			print(data.loc[cluster_id-1])
+			cluster_str = data.loc[cluster_id-1, "ClusterPixels"]
+
+			if not cluster_str:
+				return None
+
+			pattern = r'\[(\d+), (\d+), ([\d.]+), ([\d.]+)\]'
+
+			pixels_str = re.findall(pattern, cluster_str)
+
+			# pixels = [[int(p[0]), int(p[1]), float(p[2]), float(p[3])] for p in pixels_str]
+			pixels =  np.array(pixels_str, dtype=np.float64)
+
+			print(pixels)
+
+			return pixels
+
+		def plot_cluster(cluster):
+			
+			if not cluster.any():
+				return
+
+			x_min = np.min(cluster[:, 0])
+			x_max = np.max(cluster[:, 0])
+			y_min = np.min(cluster[:, 1])
+			y_max = np.max(cluster[:, 1])			
+
+			binx = list(range(int(x_min),int(x_max)))
+			biny = list(range(int(y_min),int(y_max)))
+
+			fig, axs = plt.subplots(1, 3)
+
+			axs[0].hist2d(cluster[:, 0], cluster[:, 1], bins=(binx, biny), 
+						weights=cluster[:, 2], cmap='viridis',cmin = 1.000000)
+
+			axs[1].hist2d(cluster[:, 0], cluster[:, 1], bins=(binx, biny), 
+						weights=cluster[:, 3], cmap='viridis',cmin = 1.000000)
+
+			#  plot range
+			range_x = x_max - x_min
+			range_y = y_max - y_min
+
+			range_diff = abs(range_x - range_y)
+			if range_x > range_y:
+				axs[0].set_xlim(xmin=x_min - 1, xmax = x_max + 1)
+				axs[0].set_ylim(ymin=y_min - int(range_diff/2.) - 1, ymax = y_max + int(range_diff/2.) + 1 )
+				axs[1].set_xlim(xmin=x_min - 1, xmax = x_max + 1)
+				axs[1].set_ylim(ymin=y_min - int(range_diff/2.) - 1, ymax = y_max + int(range_diff/2.) + 1 )				
+			else:
+				axs[0].set_ylim(ymin=y_min - 1, ymax = y_max + 1)
+				axs[0].set_xlim(xmin=x_min - int(range_diff/2.) -1 , xmax = x_max + int(range_diff/2.) + 1 )				
+				axs[1].set_ylim(ymin=y_min - 1, ymax = y_max + 1)
+				axs[1].set_xlim(xmin=x_min - int(range_diff/2.) -1 , xmax = x_max + int(range_diff/2.) + 1 )				
+
+			plt.xlabel('X [-]')
+			plt.ylabel('Y [-]')
+			# plt.colorbar().set_label('E')
+			plt.title('Cluster')
+
+			fig = plt.gcf()
+			fig.set_size_inches(16,5)
+
+			plt.show()
+
+		cluster_377 = get_cluster(377, clist.data)
+
+		# print(cluster_377)
+
+		plot_cluster(cluster_377)
 
 
 
