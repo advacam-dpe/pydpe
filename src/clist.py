@@ -212,6 +212,23 @@ class Clist(object):
 
 		return coinc_clm
 
+	def get_cluster(self, cluster_id):
+		print(self.data.loc[cluster_id-1])
+		cluster_str = self.data.loc[cluster_id-1, "ClusterPixels"]
+
+		if not cluster_str:
+			return None
+
+		pattern = r'\[(\d+), (\d+), ([\d.]+), ([\d.]+)\]'
+
+		pixels_str = re.findall(pattern, cluster_str)
+
+		# pixels = [[int(p[0]), int(p[1]), float(p[2]), float(p[3])] for p in pixels_str]
+		pixels =  np.array(pixels_str, dtype=np.float64)
+
+		print(pixels)
+
+		return pixels
 
 if __name__ == '__main__':
 	
@@ -253,26 +270,8 @@ if __name__ == '__main__':
 		# clist.print()
 		# print(clist.data["ClusterPixels"])
 
-		def get_cluster(cluster_id, data):
-			print(data.loc[cluster_id-1])
-			cluster_str = data.loc[cluster_id-1, "ClusterPixels"]
 
-			if not cluster_str:
-				return None
-
-			pattern = r'\[(\d+), (\d+), ([\d.]+), ([\d.]+)\]'
-
-			pixels_str = re.findall(pattern, cluster_str)
-
-			# pixels = [[int(p[0]), int(p[1]), float(p[2]), float(p[3])] for p in pixels_str]
-			pixels =  np.array(pixels_str, dtype=np.float64)
-
-			print(pixels)
-
-			return pixels
-
-
-		cluster_377 = get_cluster(377, clist.data)
+		cluster_377 =  clist.get_cluster(377)
 
 		# print(cluster_377)
 

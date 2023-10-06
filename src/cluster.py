@@ -144,7 +144,7 @@ class Cluster(object):
         ax.set_xlabel('X [-]')
         ax.set_ylabel('Y [-]')
 
-        if val_index == 2:
+        # if val_index == 2:
             
 
         if file_out:
@@ -191,6 +191,8 @@ class Cluster(object):
             pass
         else:
             plt.show()
+
+    def load_from
 
 
 
