@@ -98,7 +98,7 @@ class hist1d(object):
 
      def norm_max(self): 
           max_bins = np.max(self.bin_conts)
-          if sum_bins != 0:
+          if max_bins != 0:
                self.bin_conts = self.bin_conts/max_bins
 
      def shift(self, shift):
@@ -124,7 +124,8 @@ class hist1d(object):
           self.x_range_width =  self.x_range[1] - self.x_range[0]
           return self.x_range
 
-     def plot(self, color = "C0", do_show = True, do_zoom = False, do_log_x = False, do_log_y  = False, ax=None):
+     def plot(self, color = "C0", do_show = True, do_zoom = False, do_log_x = False, 
+               do_log_y  = False, ax=None):
           bin_conts_ext = np.append(self.bin_conts, 0)   
 
           if len(bin_conts_ext) != len(self.low_edges):
@@ -154,9 +155,12 @@ class hist1d(object):
           ax.set_ylabel(self.axis_labels[1], fontsize=12) 
           ax.set_title(self.title)    
           if do_log_y:
-               ax.yscale('log')
+               ax.set_yscale('log')
+               ax.set_ylim(ymin = 0.5, ymax = self.ymax*1.2)
           if do_log_x:
-               ax.xscale('log') 
+               ax.set_xscale('log') 
+               if x_min_val == 0:
+                    ax.set_xlim(xmin = 1)
 
           if do_show:
                plt.show()          

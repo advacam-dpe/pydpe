@@ -7,7 +7,8 @@ from os import path
 import re
 import sys
 import pandas as pd
-#from tqdm import tqdm
+from tqdm import tqdm
+from matplotlib.colors import LogNorm
 
 import hist1d as ht1d
 import cluster as cl
@@ -68,7 +69,7 @@ class Clist(object):
                     chunks = []
 
                     # iterate over the CSV file by reading it in chunks
-                    if False:
+                    if do_print:
                         with tqdm(total=total_rows-2, unit='line', unit_scale=True, desc='Loading data') as pbar:    
                             for chunk in pd.read_csv(file_path_name, chunksize=chunk_size, header=0, 
                                                         skiprows = [1], sep=self.separator, usecols=usecols,
@@ -123,23 +124,38 @@ class Clist(object):
         print("VarUnits:", self.var_units)
         print(self.data) 
 
-    def plot(self, var_key, nbin = 100, do_show = True, ax=None):
-        max_val = np.max(self.data[var_key])
-        min_val = np.min(self.data[var_key])
-        range_val = max_val - min_val
+    def plot(self, var_key, nbin = 100, do_show = True, ax=None,
+            do_log_x = False, do_log_y = False, xmin=None, xmax=None):
 
-        if min_val == max_val:
-            range_val = abs(max_val)
-            if min_val == 0:
-                range_val = 10
+        if not xmin or not xmax: 
+            max_val = np.max(self.data[var_key])
+            min_val = np.min(self.data[var_key])
+            range_val = max_val - min_val
+            if min_val == max_val:
+                range_val = abs(max_val)
+                if min_val == 0:
+                    range_val = 10
+            xmin = min_val - range_val*0.1
+            xmax = max_val + range_val*0.1
 
-        hist1d_1 = ht1d.hist1d(nbin = nbin, xmin = min_val - range_val*0.1, xmax = max_val + range_val*0.1)
+        hist1d_1 = ht1d.hist1d(nbin = nbin, xmin = xmin, xmax = xmax)
 
         hist1d_1.fill_np(self.data[var_key])
         hist1d_1.title = "Histogram of " + var_key
         hist1d_1.name = var_key        
         hist1d_1.axis_labels = [var_key, "N"]
-        hist1d_1.plot(do_show=do_show, ax=ax)
+        hist1d_1.plot(do_show=do_show, ax=ax, do_log_y = do_log_y, do_log_x = do_log_x)
+
+        ax.set_ylabel("N [-]", fontsize=10)
+
+        unit_x = " "
+        try:
+            unit_x += f"[{self.var_units[list(self.var_keys).index(var_key)]}]"
+        except:
+            pass
+        ax.set_xlabel(var_key + unit_x, fontsize=10)
+
+        return hist1d_1
 
     def plot_all(self, nbin = 100, do_show = True):
 
@@ -162,11 +178,82 @@ class Clist(object):
         if do_show:
             plt.show()
 
-    def filter_data_frame(self, var_key, min_val, max_val, keep_data = False):
-        data_filter = self.data.loc[(self.data[var_key] >= min_val) & (self.data[var_key] <= max_val)]     
+    def plot_hist2d(self, var_key_x, var_key_y, fig=None, ax=None, do_show=True,
+                    do_log_z = True):
+
+        if not fig or not ax:
+            fig, ax = plt.subplots()
+
+        norm = None
+        if do_log_z:
+            norm = LogNorm()
+
+        hist2d = ax.hist2d(self.data[var_key_x], self.data[var_key_y], bins=[100,100],    
+                        norm = norm)
+
+        cbar = plt.colorbar(hist2d[3], ax=ax)
+        cbar.set_label("N [-]")
+
+        unit_x = " "
+        unit_y = " "
+
+        try:
+            unit_x += f"[{self.var_units[list(self.var_keys).index(var_key_x)]}]"
+            unit_y += f"[{self.var_units[list(self.var_keys).index(var_key_y)]}]"
+        except:
+            pass
+
+        ax.set_xlabel(var_key_x + unit_x)
+        ax.set_ylabel(var_key_y + unit_y)
+
+        if do_show:
+            cbar = plt.colorbar(hist2d[3], ax=ax)            
+            plt.show()
+
+        return hist2d, cbar
+
+
+    def plot_clusters(self, fig=None, ax=None, cluster_count=30, do_show=True, idx_start=None):
+
+        if not fig or not ax:
+            fig, ax = plt.subplots()
+
+        i = 0
+        idx = 0 
+        hist = None
+        if idx_start and idx_start > 0 and idx_start < len(self.data):
+            idx = idx_start
+        while i <= cluster_count and idx < len(self.data):
+            try:
+                idx += 1
+                cluster = self.get_cluster(cluster_idx=idx)
+                hist, cbar = cluster.plot(fig=fig, ax=ax, show_plot=False)
+                cbar.remove()
+            except:
+                continue
+
+            i += 1
+
+        ax.set_xlim(0,256)
+        ax.set_ylim(0,256)
+        cbar = plt.colorbar(hist[3], ax=ax)
+
+        if do_show:
+            cbar = plt.colorbar(hist[3], ax=ax)
+            plt.show()
+
+        return cbar
+
+    def filter_data_frame(self, var_key, min_val, max_val, keep_data = False, get_out_data = False):
+        data_filter = self.data.loc[(self.data[var_key] >= min_val) & (self.data[var_key] <= max_val)]  
+        data_filter_out = None
+        if get_out_data:
+            data_filter_out = self.data.loc[(self.data[var_key] < min_val) | (self.data[var_key] > max_val)] 
+        
         if keep_data:
             self.data = data_filter
-        return data_filter
+
+        return data_filter, data_filter_out
 
     def randomize(self, do_reset_idx = False, keep_data = False):
         data_rand = pd.DataFrame()
@@ -217,21 +304,53 @@ class Clist(object):
 
         return coinc_clm
 
-    def get_cluster(self, cluster_id):
-        cluster_str = self.data.loc[self.data["ClusterID"]==cluster_id, "ClusterPixels"]
-        cluster_str = cluster_str.iloc[0] # Cluster ID is not unique, take first instance
-        
-#        if not cluster_str:
-#            return None
+    def get_cluster(self, cluster_id=None, cluster_idx=None):
+        if cluster_id != None:            
+            cluster_str = self.data.loc[self.data["ClusterID"]==cluster_id, "ClusterPixels"]
+            cluster_str = cluster_str.iloc[0] # Cluster ID is not unique, take first instance
+        elif cluster_idx != None:
+            cluster_str = self.data.iloc[cluster_idx]["ClusterPixels"]
 
-        clus = cl.Cluster()
+        cluster = cl.Cluster()
 
-        clus.load_from(cluster_str)
-        return clus
+        cluster.load_from(cluster_str)
+        return cluster
+
+    def export(self, file_out_path_name):
+        if self.data is not None and not self.data.empty:
+            file_out = open(file_out_path_name, "w")
+
+            if not file_out_path_name or file_out.closed:
+                print("Cna not open file for export: ", file_out_path_name)
+                return
+
+            # header
+            msg = ""
+            for var_key in self.var_keys:
+                msg += var_key + self.separator
+            msg = msg[:-1] + '\n'
+            file_out.write(msg)
+
+            msg = ""
+            for var_unit in self.var_units:
+                msg += var_unit + self.separator
+            msg = msg[:-1] + '\n'
+            file_out.write(msg)
+
+            # data
+            for i,row in self.data.iterrows():
+                msg = ""
+                for num in row:
+                    msg += str(num) + self.separator
+                msg = msg[:-1] + '\n'
+                file_out.write(msg)
+
+            file_out.close()
+
 
 if __name__ == '__main__':
     
-    case = 4
+    case = 6
 
     if case == 1:
 
@@ -272,6 +391,24 @@ if __name__ == '__main__':
 
         cluster_377.plot()
 
+    elif case == 5:
+
+        filein_path_name = "./devel/in/CListExt.clist"
+        clist_2 = Clist(filein_path_name, nrows=1000)
+        clist_2.print()
+        # clist_2.plot("E")    
+        clist_2.plot_clusters()
+
+    elif case == 6:
+
+        filein_path_name = "./devel/in/CListExt.clist"
+        file_out_path_name = "./devel/data.clist"
+        clist_2 = Clist(filein_path_name, nrows=1000)
+        # clist_2.print()
+        # clist_2.plot("E")    
+        # clist_2.plot_clusters()
+
+        clist_2.export(file_out_path_name)
 
 
 
