@@ -125,9 +125,10 @@ class Clist(object):
         print(self.data) 
 
     def plot(self, var_key, nbin = 100, do_show = True, ax=None,
-            do_log_x = False, do_log_y = False, xmin=None, xmax=None):
+            do_log_x = False, do_log_y = False, xmin=None, xmax=None, color="C0",
+            label=""):
 
-        if not xmin or not xmax: 
+        if xmin is None or xmax is None: 
             max_val = np.max(self.data[var_key])
             min_val = np.min(self.data[var_key])
             range_val = max_val - min_val
@@ -135,16 +136,18 @@ class Clist(object):
                 range_val = abs(max_val)
                 if min_val == 0:
                     range_val = 10
-            xmin = min_val - range_val*0.1
-            xmax = max_val + range_val*0.1
+            if xmin is None:
+                xmin = min_val - range_val*0.1
+            if xmax is None:
+                xmax = max_val + range_val*0.1
 
         hist1d_1 = ht1d.hist1d(nbin = nbin, xmin = xmin, xmax = xmax)
 
         hist1d_1.fill_np(self.data[var_key])
         hist1d_1.title = "Histogram of " + var_key
-        hist1d_1.name = var_key        
+        hist1d_1.name = var_key if not label else label     
         hist1d_1.axis_labels = [var_key, "N"]
-        hist1d_1.plot(do_show=do_show, ax=ax, do_log_y = do_log_y, do_log_x = do_log_x)
+        hist1d_1.plot(do_show=do_show, ax=ax, do_log_y = do_log_y, do_log_x = do_log_x, color=color)
 
         ax.set_ylabel("N [-]", fontsize=10)
 
@@ -167,8 +170,14 @@ class Clist(object):
         for i in range(self.ncol):
             i_y = int(i/dim_x)
             i_x = i - i_y*dim_x
+
+            print(i, i_x, i_y)
+
             if self.var_keys[i] != "ClusterID" and self.var_keys[i] != "ClusterPixels":
-                self.plot(self.var_keys[i], ax=axs[i_y,i_x], do_show=False)
+                try:
+                    self.plot(self.var_keys[i], ax=axs[i_y,i_x], do_show=False)
+                except Exception as e:
+                    print(f"[ERROR] Fail to show histogram {self.var_keys[i]}: {e}.")
 
         fig_size_x = 4.5 * dim_x;
         fig_size_y = 2.7 * dim_y;
@@ -214,7 +223,6 @@ class Clist(object):
 
 
     def plot_clusters(self, fig=None, ax=None, cluster_count=30, do_show=True, idx_start=None):
-
         if not fig or not ax:
             fig, ax = plt.subplots()
 
@@ -223,23 +231,27 @@ class Clist(object):
         hist = None
         if idx_start and idx_start > 0 and idx_start < len(self.data):
             idx = idx_start
-        while i <= cluster_count and idx < len(self.data):
+
+        while i < cluster_count and idx < len(self.data):
             try:
                 idx += 1
                 cluster = self.get_cluster(cluster_idx=idx)
                 hist, cbar = cluster.plot(fig=fig, ax=ax, show_plot=False)
                 cbar.remove()
-            except:
+            except Exception as e:
+                print(f"{e}")
                 continue
-
             i += 1
+
+        if hist is None:
+            print("[ERROR] No clusters showed in plot_clusters fuction.")
+            return
 
         ax.set_xlim(0,256)
         ax.set_ylim(0,256)
         cbar = plt.colorbar(hist[3], ax=ax)
 
         if do_show:
-            cbar = plt.colorbar(hist[3], ax=ax)
             plt.show()
 
         return cbar
@@ -313,7 +325,7 @@ class Clist(object):
 
         cluster = cl.Cluster()
 
-        cluster.load_from(cluster_str)
+        cluster.load_from_string(cluster_str)
         return cluster
 
     def export(self, file_out_path_name):

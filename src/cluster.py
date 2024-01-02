@@ -257,16 +257,36 @@ class Cluster(object):
             plt.show()
         
         
-    def load_from(self, cluster_str):
+    def load_from_string(self, cluster_str):
+        if not cluster_str:
+            print("[ERROR] Can not load cluster from string because it is empty string.")
+
+        try:
+            first_pixel_str = cluster_str[cluster_str.find("["):cluster_str.find("]")]
+            pixel_dim = len(first_pixel_str.split(","))
+
+            if pixel_dim == 3:
+                pattern = r'\[(\d+), (\d+), ([\d.]+)\]'
+                pixels_str = re.findall(pattern, cluster_str)
+                
+                for pixel in pixels_str:
+                    pix = Pixel(x=int(pixel[0]), y=int(pixel[1]), tot=float(pixel[2]))
+                    self.add_pixel(pix)
+            elif pixel_dim == 4:                
+                pattern = r'\[(\d+), (\d+), ([\d.]+), ([\d.]+)\]'
+                pixels_str = re.findall(pattern, cluster_str)
+                
+                for pixel in pixels_str:
+                    pix = Pixel(x=int(pixel[0]), y=int(pixel[1]), tot=float(pixel[2]), toa=float(pixel[3]))
+                    self.add_pixel(pix)
+
+            else:
+                raise RuntimeError("could not parse string")
+
+        except Exception as e:
+            print(f"[ERROR] Fail to load cluster from string: {e}.")
         
-        pattern = r'\[(\d+), (\d+), ([\d.]+), ([\d.]+)\]'
-        pixels_str = re.findall(pattern, cluster_str)
-        
-        for pixel in pixels_str:
-            pix = Pixel(x=int(pixel[0]), y=int(pixel[1]), tot=float(pixel[2]), toa=float(pixel[3]))
-            self.add_pixel(pix)
-        
-        
+
 if __name__ == '__main__':
 
     case = 2
@@ -277,7 +297,7 @@ if __name__ == '__main__':
 
         cluster= Cluster()
 
-        cluster.load_from(cluster_str)
+        cluster.load_from_string(cluster_str)
 
         cluster.plot()
 

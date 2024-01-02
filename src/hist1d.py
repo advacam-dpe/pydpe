@@ -147,17 +147,20 @@ class hist1d(object):
                x_min_val = x_min_val - 1
                x_max_val = x_max_val + 1
 
-          ax.set_ylim(ymin = 0, ymax = self.ymax*1.2) 
-          ax.set_xlim(xmin = x_min_val, xmax = x_max_val)
           ax.legend()
           ax.grid(visible = True, color ='grey',  linestyle ='-.', linewidth = 0.5,  alpha = 0.6)
           ax.set_xlabel(self.axis_labels[0], fontsize=12) 
           ax.set_ylabel(self.axis_labels[1], fontsize=12) 
           ax.set_title(self.title)    
-          if do_log_y:
+          if not do_log_y:
+               ax.set_ylim(ymin = 0, ymax = self.ymax*1.2) 
+          else:
                ax.set_yscale('log')
                ax.set_ylim(ymin = 0.5, ymax = self.ymax*1.2)
-          if do_log_x:
+
+          if not do_log_x:
+               ax.set_xlim(xmin = x_min_val, xmax = x_max_val)
+          else:
                ax.set_xscale('log') 
                if x_min_val == 0:
                     ax.set_xlim(xmin = 1)
