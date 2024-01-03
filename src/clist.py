@@ -9,6 +9,7 @@ import sys
 import pandas as pd
 from tqdm import tqdm
 from matplotlib.colors import LogNorm
+import copy
 
 import hist1d as ht1d
 import cluster as cl
@@ -89,14 +90,14 @@ class Clist(object):
 
                     # self.data = pd.read_csv(file_path_name, sep=self.separator, header=[0], skiprows = [1])
                     self.filein_path_name = file_path_name
-                    self.var_keys = self.data.keys() 
+                    self.var_keys =  list(copy.deepcopy(self.data.keys())) 
                     self.ncol = len(self.var_keys)
                     self.nrow = len(self.data)
                 else:
                     print("Load of data failed from file:" + file_path_name)
 
-        except IOError:
-            print("Can not open file: " + file_path_name )    
+        except Exception as e:
+            print(f"Can not open file: {file_path_name}. {e}")    
             return -1
 
         return 0
@@ -170,9 +171,6 @@ class Clist(object):
         for i in range(self.ncol):
             i_y = int(i/dim_x)
             i_x = i - i_y*dim_x
-
-            print(i, i_x, i_y)
-
             if self.var_keys[i] != "ClusterID" and self.var_keys[i] != "ClusterPixels":
                 try:
                     self.plot(self.var_keys[i], ax=axs[i_y,i_x], do_show=False)
@@ -252,6 +250,7 @@ class Clist(object):
         cbar = plt.colorbar(hist[3], ax=ax)
 
         if do_show:
+            cbar = plt.colorbar(hist[3], ax=ax)
             plt.show()
 
         return cbar
@@ -317,19 +316,28 @@ class Clist(object):
         return coinc_clm
 
     def get_cluster(self, cluster_id=None, cluster_idx=None):
-        if cluster_id != None:            
-            cluster_str = self.data.loc[self.data["ClusterID"]==cluster_id, "ClusterPixels"]
-            cluster_str = cluster_str.iloc[0] # Cluster ID is not unique, take first instance
-        elif cluster_idx != None:
-            cluster_str = self.data.iloc[cluster_idx]["ClusterPixels"]
 
-        cluster = cl.Cluster()
+        try:
+            if cluster_id != None:            
+                cluster_str = self.data.loc[self.data["ClusterID"]==cluster_id, "ClusterPixels"]
+                cluster_str = cluster_str.iloc[0] # Cluster ID is not unique, take first instance
+            elif cluster_idx != None:
+                cluster_str = self.data.iloc[cluster_idx]["ClusterPixels"]
 
-        cluster.load_from_string(cluster_str)
-        return cluster
+            cluster = cl.Cluster()
+
+            cluster.load_from_string(cluster_str)
+            return cluster
+        except Exception as e:
+            print(f"[ERROR] Failed to get cluster: at {cluster_id} or {cluster_idx}: {e}")
+            return None
 
     def export(self, file_out_path_name):
-        if self.data is not None and not self.data.empty:
+        if self.data is None or self.data.empty:
+            print("Can not export clist because it is empty.")
+            return
+
+        try:
             file_out = open(file_out_path_name, "w")
 
             if not file_out_path_name or file_out.closed:
@@ -358,6 +366,78 @@ class Clist(object):
                 file_out.write(msg)
 
             file_out.close()
+        except Exception as e:
+            print(f"Fail to export clist: {e}.")
+
+    def extend_varaibles(self):
+        if self.data is None or self.data.empty:
+            print("[ERROR] Failed ot extend clist because there is no data.")
+            return
+
+        try:
+            # epix relative std
+            self.data["EpixStdRel"] = self.data["EpixStd"] / self.data["EpixMean"]
+            self.var_keys.append("EpixStdRel")
+            self.var_units.append("-")
+
+            self.data["EpixMean/Height"] = self.data["EpixMean"] / self.data["Height"]
+            self.var_keys.append("EpixMean/Height")
+            self.var_units.append("-")
+
+            self._calculate_cluster_pixel_variable_extensions()
+
+            # self.data["EpixMean/Height"] = self.data["EpixMean"] / self.data["Height"]
+            # self.var_keys.append("EpixMean/Height")
+            # self.var_units.append("-")
+
+        except Exception as e:
+            print(f"[ERROR] Failed to extend clist: {e}.")
+
+    def _calculate_cluster_pixel_variable_extensions(self):
+        if self.data is None or self.data.empty:
+            print("[ERROR] Failed to calculate new cluster variables because there is no data.")
+            return
+
+        for idx in  range(len(self.data)):
+            cluster = self.get_cluster(cluster_idx=idx)     
+            self._calculate_cluster_energy_levels(cluster)   
+
+
+    def _calculate_cluster_energy_levels(self, cluster):
+        cluster.convert_pixels_to_numpy()
+
+        energy_intervals = [30, 330, 1e100]
+        
+        energy_sums = []
+        count_sums = []
+
+        energy = 0
+        size = 0
+        for i in range(len(energy_intervals)):
+            energy_sums.append(0)
+            count_sums.append(0)
+
+        for row in cluster.pixels_np:
+            px_energy = row[2]
+
+            energy += px_energy
+            size += 1
+
+            for idx, energy_interval in enumerate(energy_intervals):
+                if px_energy < energy_interval:
+                    energy_sums[idx] += px_energy
+                    count_sums[idx] += 1
+                    break
+
+        energy_sums_fraction = [num / energy for num in energy_sums]
+        count_sums_fraction = [num / size for num in count_sums]
+
+        print("-----------------------")
+        print("energy_sums", energy_sums)
+        print("energy_sums_fraction", energy_sums_fraction)
+        print("count_sums", count_sums)
+        print("count_sums_fraction", count_sums_fraction)
+
 
 
 if __name__ == '__main__':

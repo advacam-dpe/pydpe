@@ -73,30 +73,35 @@ class Cluster(object):
 
 
     def convert_pixels_to_numpy(self):
-        
         if not self.pixels:
-            raise Exception("No pixels")
+            raise Exception("Failed to covert pixels to numpy. No pixels")
+        if self.pixels_np[0,0] != -1:
+            return
 
-        pix_dim = 4 if self.pixels[0].is_tpx3() else 3
-        pixels_np = np.zeros(shape=(len(self.pixels),pix_dim), dtype=np.float64)
+        try:
+            pix_dim = 4 if self.pixels[0].is_tpx3() else 3
+            pixels_np = np.zeros(shape=(len(self.pixels),pix_dim), dtype=np.float64)
 
-        for i, pixel in enumerate(self.pixels):
-            pixels_np[i,0] = float(pixel.x)
-            pixels_np[i,1] = float(pixel.y)
-            pixels_np[i,2] = float(pixel.tot)
+            for i, pixel in enumerate(self.pixels):
+                pixels_np[i,0] = float(pixel.x)
+                pixels_np[i,1] = float(pixel.y)
+                pixels_np[i,2] = float(pixel.tot)
 
-            if pix_dim > 3:
-                if pixel.count != -1:
-                    pixels_np[i,3] = float(pixel.count)   
-                elif pixel.toa != -1:
-                    pixels_np[i,3] = float(pixel.toa)
+                if pix_dim > 3:
+                    if pixel.count != -1:
+                        pixels_np[i,3] = float(pixel.count)   
+                    elif pixel.toa != -1:
+                        pixels_np[i,3] = float(pixel.toa)
 
-        pixels_np[:, 0] += 0.5
-        pixels_np[:, 1] += 0.5
+            pixels_np[:, 0] += 0.5
+            pixels_np[:, 1] += 0.5
 
-        self.pixels_np = pixels_np
+            self.pixels_np = pixels_np
 
-        return pixels_np
+            return pixels_np
+        except Exception as e:
+            print(f"[ERROR] Failed to load cluster pixel np: {e}")
+
 
     def get_border_pixels(self):
 
@@ -116,89 +121,93 @@ class Cluster(object):
         print(self.x_vol, self.y_vol)
 
     def plot(self, var_idx = 2, fig = None, ax=None, show_plot=True, file_out = ""):
-
         if not self.pixels:
-            raise Exception("No pixels") 
+            raise Exception("Failed to plot cluster. No pixels") 
 
-        pix_dim = 4 if self.pixels[0].is_tpx3() else 3
+        try:
+            pix_dim = 4 if self.pixels[0].is_tpx3() else 3
 
-        if var_idx >= pix_dim or var_idx <= 1:
-            raise Exception("Incorrect varaible index.") 
+            if var_idx >= pix_dim or var_idx <= 1:
+                raise Exception("Incorrect varaible index.") 
 
-        if self.pixels_np[0,0] == -1.:
-            self.convert_pixels_to_numpy()
+            if self.pixels_np[0,0] == -1.:
+                self.convert_pixels_to_numpy()
 
-        if self.x_board_min == -1:
-            self.get_border_pixels()    
+            if self.x_board_min == -1:
+                self.get_border_pixels()    
 
-        binx = list(range(int(self.x_board_min),int(self.x_board_max)+1))
-        biny = list(range(int(self.y_board_min),int(self.y_board_max)+1))
+            binx = list(range(int(self.x_board_min),int(self.x_board_max)+1))
+            biny = list(range(int(self.y_board_min),int(self.y_board_max)+1))
 
-        if self.x_board_min == self.x_board_max:
-            binx = [int(self.x_board_min)]
-        if self.y_board_min == self.y_board_max:
-            biny = [int(self.y_board_min)]
+            if self.x_board_min == self.x_board_max:
+                binx = [int(self.x_board_min)]
+            if self.y_board_min == self.y_board_max:
+                biny = [int(self.y_board_min)]
 
-        if fig == None or ax == None:
-            fig, ax = plt.subplots()
+            if fig == None or ax == None:
+                fig, ax = plt.subplots()
 
-        x_edges = self.pixels_np[:, 0].tolist()
-        y_edges = self.pixels_np[:, 1].tolist()
-        bin_conts = self.pixels_np[:, var_idx].tolist()
+            x_edges = self.pixels_np[:, 0].tolist()
+            y_edges = self.pixels_np[:, 1].tolist()
+            bin_conts = self.pixels_np[:, var_idx].tolist()
 
-        x_edges.append(self.x_board_max+1)
-        y_edges.append(self.y_board_max+1)
-        bin_conts.append(0)
+            x_edges.append(self.x_board_max+1)
+            y_edges.append(self.y_board_max+1)
+            bin_conts.append(0)
 
-        binx.append(int(self.x_board_max)+1)
-        biny.append(int(self.y_board_max)+1)
+            binx.append(int(self.x_board_max)+1)
+            biny.append(int(self.y_board_max)+1)
 
-        hist = ax.hist2d(x_edges, y_edges, bins=(binx, biny), 
-                    weights=bin_conts, cmap='viridis',cmin = 1.000000)
+            hist = ax.hist2d(x_edges, y_edges, bins=(binx, biny), 
+                        weights=bin_conts, cmap='viridis',cmin = 1.000000)
 
-        #  plot range
-        range_x = self.x_board_max - self.x_board_min + 1
-        range_y = self.y_board_max - self.y_board_min + 1
-        range_diff = abs(range_x - range_y)
+            #  plot range
+            range_x = self.x_board_max - self.x_board_min + 1
+            range_y = self.y_board_max - self.y_board_min + 1
+            range_diff = abs(range_x - range_y)
 
-        x_range_min = self.x_board_min - 1.5
-        x_range_max = self.x_board_max + 1.5
-        y_range_min = self.y_board_min - 1.5
-        y_range_max = self.y_board_max + 1.5
+            x_range_min = self.x_board_min - 1.5
+            x_range_max = self.x_board_max + 1.5
+            y_range_min = self.y_board_min - 1.5
+            y_range_max = self.y_board_max + 1.5
 
-        if range_y > range_x:
-            x_range_min = self.x_board_min - int(range_diff/2.) - 1.5
-            x_range_max = self.x_board_max + int(range_diff/2.) + 1.5                         
-        if range_y < range_x:
-            y_range_min = self.y_board_min - int(range_diff/2.) - 1.5
-            y_range_max = self.y_board_max + int(range_diff/2.) + 1.5             
+            if range_y > range_x:
+                x_range_min = self.x_board_min - int(range_diff/2.) - 1.5
+                x_range_max = self.x_board_max + int(range_diff/2.) + 1.5                         
+            if range_y < range_x:
+                y_range_min = self.y_board_min - int(range_diff/2.) - 1.5
+                y_range_max = self.y_board_max + int(range_diff/2.) + 1.5             
 
-        ax.set_xlim(xmin = x_range_min, xmax = x_range_max)
-        ax.set_ylim(ymin = y_range_min, ymax = y_range_max)
+            ax.set_xlim(xmin = x_range_min, xmax = x_range_max)
+            ax.set_ylim(ymin = y_range_min, ymax = y_range_max)
 
 
-        cbar = fig.colorbar(hist[3], ax=ax)  # hist[3] returns the QuadMesh
-        cbar.set_label('Counts')
+            cbar = fig.colorbar(hist[3], ax=ax)  # hist[3] returns the QuadMesh
+            cbar.set_label('Counts')
 
-        ax.set_xlabel('X [-]')
-        ax.set_ylabel('Y [-]')
+            ax.set_xlabel('X [-]')
+            ax.set_ylabel('Y [-]')
 
-        if var_idx == 2:
-            if self.is_calibrated():
-                cbar.set_label('Energy [keV]')
-            else:
-                cbar.set_label('ToT [-]')
+            if var_idx == 2:
+                if self.is_calibrated():
+                    cbar.set_label('Energy [keV]')
+                else:
+                    cbar.set_label('ToT [-]')
 
-        ax.set_aspect('equal')
+            ax.set_aspect('equal')
 
-        if file_out:
-            pass
-        elif show_plot:
-            fig = plt.gcf()
-            fig.set_size_inches(6.5,5)            
-            plt.show()
+            if file_out:
+                pass
+            elif show_plot:
+                fig = plt.gcf()
+                fig.set_size_inches(6.5,5)            
+                plt.show()
 
-        return hist, cbar
+            return hist, cbar
+        except Exception as e:
+            print(f"[ERROR] Failed to plot cluster: {e}.")
+            return None, None
+
 
     def is_calibrated(self):
 
@@ -221,7 +230,7 @@ class Cluster(object):
     def plot_all(self, file_out = ""):
         
         if not self.pixels:
-            raise Exception("No pixels") 
+            raise Exception("Failed to all plot cluster. No pixels") 
 
 
         pix_dim = 4 if self.pixels[0].is_tpx3() else 3
@@ -297,7 +306,7 @@ if __name__ == '__main__':
 
         cluster= Cluster()
 
-        cluster.load_from_string(cluster_str)
+        cluster.load_from(cluster_str)
 
         cluster.plot()
 
