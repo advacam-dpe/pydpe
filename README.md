@@ -10,5 +10,7 @@ Introduction
 
 Library for reading and plotting of DPE results and data. 
 
+Tested on python 3.10.
+
 -------------------------------------------------------------------------------
 
