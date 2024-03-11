@@ -250,7 +250,6 @@ class Clist(object):
         cbar = plt.colorbar(hist[3], ax=ax)
 
         if do_show:
-            cbar = plt.colorbar(hist[3], ax=ax)
             plt.show()
 
         return cbar

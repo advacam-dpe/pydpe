@@ -102,6 +102,26 @@ class Cluster(object):
         except Exception as e:
             print(f"[ERROR] Failed to load cluster pixel np: {e}")
 
+    def convert_pixels_to_matrix(self, var_idx=2, width=256, height=256):
+
+        if self.pixels_np[0,0] == -1:
+            self.convert_pixels_to_numpy()
+
+        if self.pixels_np[0,0] == -1:            
+            print(f"error - can not covert pixels to matrix, because numpy matrix are empty")
+            return
+
+        if var_idx > len(self.pixels_np[0]):
+            print(f"error - idx of variable {var_idx} is lager than size of pixel array {len(self.pixels_np[0])}")  
+            return          
+
+        matrix = np.zeros((height, width))
+
+        for pixel in self.pixels_np:
+
+            matrix[int(pixel[1]), int(pixel[0])] += pixel[var_idx]
+
+        return matrix
 
     def get_border_pixels(self):
 
@@ -159,7 +179,7 @@ class Cluster(object):
             biny.append(int(self.y_board_max)+1)
 
             hist = ax.hist2d(x_edges, y_edges, bins=(binx, biny), 
-                        weights=bin_conts, cmap='viridis',cmin = 1.000000)
+                        weights=bin_conts, cmap='viridis', cmin = 1.000000)
 
             #  plot range
             range_x = self.x_board_max - self.x_board_min + 1
@@ -180,7 +200,6 @@ class Cluster(object):
 
             ax.set_xlim(xmin = x_range_min, xmax = x_range_max)
             ax.set_ylim(ymin = y_range_min, ymax = y_range_max)
-
 
             cbar = fig.colorbar(hist[3], ax=ax)  # hist[3] returns the QuadMesh
             cbar.set_label('Counts')
