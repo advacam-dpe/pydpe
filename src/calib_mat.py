@@ -42,9 +42,9 @@ if __name__ == '__main__':
 
     cal_mat_a, cal_mat_b, cal_mat_c, cal_mat_t = load_calib_matrixes(cal_mat_dir)
 
-    plt.imshow(cal_mat_a)
-    plt.show()
+    #plt.imshow(cal_mat_a)
+    #plt.show()
 
-    calibrate_pixel([65,185,112], cal_mat_a, cal_mat_b, cal_mat_c, cal_mat_t)
-    calibrate_pixel([62,184,131], cal_mat_a, cal_mat_b, cal_mat_c, cal_mat_t)
+    #calibrate_pixel([65,185,112], cal_mat_a, cal_mat_b, cal_mat_c, cal_mat_t)
+    #calibrate_pixel([62,184,131], cal_mat_a, cal_mat_b, cal_mat_c, cal_mat_t)
     calibrate_pixel([61,184,26], cal_mat_a, cal_mat_b, cal_mat_c, cal_mat_t)

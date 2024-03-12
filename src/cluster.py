@@ -22,16 +22,17 @@ class Pixel(object):
         self.tot = tot
         self.count = count
 
+        self.energy = -1
+
         self.cons_init()
 
     def cons_init(self):
         if self.index == -1 and self.x != -1 and self.y != -1:
             self.index = self.x + 256*self.y
 
-    def calibrate(self, cal_mat_dir):
+    def calibrate(self, cal_mat_a, cal_mat_b, cal_mat_c, cal_mat_t):
         try:
-            cal_mat_a, cal_mat_b, cal_mat_c, cal_mat_t = calib_mat.load_calib_matrixes(cal_mat_dir)
-            self.tot = calib_mat.calibrate_pixel([self.x, self.y, self.tot] ,cal_mat_a, cal_mat_b, cal_mat_c, cal_mat_t)
+            self.energy = calib_mat.calibrate_pixel([self.x, self.y, self.tot] ,cal_mat_a, cal_mat_b, cal_mat_c, cal_mat_t)
         except:
             print("Fail to calibrate")
 
@@ -40,6 +41,12 @@ class Pixel(object):
             return True
         else: 
             return False
+    
+    def get_energy(self):
+        if self.energy != -1:
+            return self.energy
+        else:
+            return self.tot
 
 class Cluster(object):
     """init"""
@@ -63,6 +70,7 @@ class Cluster(object):
         self.height = -1
         self.roundness = -1
         self.linearity = -1
+        self.edge = -1
 
 
     def add_pixel(self, pixel=None, x=-1, y=-1, tot=-1):
@@ -284,8 +292,27 @@ class Cluster(object):
             pass
         else:
             plt.show()
+    
+    # while loading from clist, {energy, time, size, height, roundness,linearity} are determined   
+    def load_from_clist_row(self,clist_row):
+
+        self.energy = clist_row["E"]
+        self.time = clist_row["T"]
+        self.size = clist_row["Size"]
+        self.height = clist_row["Height"]
+        self.roundness = clist_row["Roundness"]
+        self.linearity = clist_row["Linearity"]
+        self.edge = clist_row["IsSensEdge"]
+
+        cluster_str = clist_row["ClusterPixels"]
+        try:
+            self.load_from_string(cluster_str)
+        except:
+            print("Failed to load cluster from clist.")
         
-        
+
+
+
     def load_from_string(self, cluster_str):
         if not cluster_str:
             print("[ERROR] Can not load cluster from string because it is empty string.")
@@ -326,9 +353,16 @@ if __name__ == '__main__':
         cluster_1.plot_all()
 
         cal_mat_dir = "/home/katka/Desktop/Projects/TPX3_high_energy_calibration/configs/Ikrum20/H09-W0044_Si_500um_carlos_miram/CalMat/"
+        cal_mat_a, cal_mat_b, cal_mat_c, cal_mat_t = calib_mat.load_calib_matrixes(cal_mat_dir)
 
         for pix in cluster_1.pixels:
-            pix.calibrate(cal_mat_dir)
+            print(pix.tot)
+            print(pix.energy)
+            print(pix.get_energy())
+            pix.calibrate(cal_mat_a, cal_mat_b, cal_mat_c, cal_mat_t)
+            print(pix.tot)
+            print(pix.energy)
+            print(pix.get_energy())
 
     elif case == 1:
 
