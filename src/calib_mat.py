@@ -3,13 +3,15 @@ import math
 import matplotlib.pyplot as plt
 
 
-def load_calib_matrixes(cal_mat_dir, cal_mat_a, cal_mat_b, cal_mat_c, cal_mat_t):
+def load_calib_matrixes(cal_mat_dir):
 
     cols = list(range(0,256))
     cal_mat_a = np.loadtxt(cal_mat_dir + "a.txt", delimiter=" ", usecols =cols)
     cal_mat_b = np.loadtxt(cal_mat_dir + "b.txt", delimiter=" ", usecols =cols)
     cal_mat_c = np.loadtxt(cal_mat_dir + "c.txt", delimiter=" ", usecols =cols)
     cal_mat_t = np.loadtxt(cal_mat_dir + "t.txt", delimiter=" ", usecols =cols)
+
+    return cal_mat_a, cal_mat_b, cal_mat_c, cal_mat_t
 
 def calibrate_pixel(pixel, cal_mat_a, cal_mat_b, cal_mat_c, cal_mat_t):
     x = pixel[0]
@@ -36,9 +38,9 @@ def calibrate_pixel(pixel, cal_mat_a, cal_mat_b, cal_mat_c, cal_mat_t):
 
 if __name__ == '__main__':
 
-    cal_mat_dir = "/home/lukas/file/sw/cpp/data_proc/proc/dpe/test/data/test_020/CalMat/"
+    cal_mat_dir = "/home/katka/Desktop/Projects/TPX3_high_energy_calibration/configs/Ikrum20/H09-W0044_Si_500um_carlos_miram/CalMat/"
 
-    load_calib_matrixes(cal_mat_dir, cal_mat_a, cal_mat_b, cal_mat_c, cal_mat_t)
+    cal_mat_a, cal_mat_b, cal_mat_c, cal_mat_t = load_calib_matrixes(cal_mat_dir)
 
     plt.imshow(cal_mat_a)
     plt.show()
