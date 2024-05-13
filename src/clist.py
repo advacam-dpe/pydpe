@@ -318,15 +318,14 @@ class Clist(object):
     def get_cluster(self, cluster_id=None, cluster_idx=None):
 
         try:
-            if cluster_id != None:            
-                cluster_str = self.data.loc[self.data["ClusterID"]==cluster_id, "ClusterPixels"]
-                cluster_str = cluster_str.iloc[0] # Cluster ID is not unique, take first instance
-            elif cluster_idx != None:
-                cluster_str = self.data.iloc[cluster_idx]["ClusterPixels"]
+            if cluster_id is not None:            
+                row = self.data.loc[self.data["ClusterID"]==cluster_id]
+                row = row.iloc[0] # Cluster ID is not unique, take first instance
+            elif cluster_idx is not None:
+                row = self.data.iloc[cluster_idx]
 
             cluster = cl.Cluster()
-
-            cluster.load_from_string(cluster_str)
+            cluster.load_from_pd_row(row)
             return cluster
         except Exception as e:
             print(f"[ERROR] Failed to get cluster: at {cluster_id} or {cluster_idx}: {e}")

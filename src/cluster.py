@@ -56,6 +56,8 @@ class Cluster(object):
         self.pixels = []
         self.pixels_np = np.array([[-1.,-1.,-1.,-1.]])
 
+        self.vars = None
+
         self.calibrated = None
 
         self.x_vol = -1
@@ -111,7 +113,7 @@ class Cluster(object):
         except Exception as e:
             print(f"[ERROR] Failed to load cluster pixel np: {e}")
 
-    def convert_pixels_to_matrix(self, var_idx=2, width=256, height=256):
+    def convert_pixels_to_matrix(self, var_idx=2, width=256, height=256, do_shift_center=False):
 
         if self.pixels_np[0,0] == -1:
             self.convert_pixels_to_numpy()
@@ -124,11 +126,21 @@ class Cluster(object):
             print(f"error - idx of variable {var_idx} is lager than size of pixel array {len(self.pixels_np[0])}")  
             return          
 
+        x_shift = 0
+        y_shift = 0
+
+        if do_shift_center:
+            try:
+                x_shift = int(int(width/2.) - self.vars["X"])
+                y_shift = int(int(height/2.) - self.vars["Y"])
+            except Exception as e:
+                print(f"error - can not gen shift x and y for exporting cluster into matrix: {e}" )
+
         matrix = np.zeros((height, width))
 
         for pixel in self.pixels_np:
 
-            matrix[int(pixel[1]), int(pixel[0])] += pixel[var_idx]
+            matrix[int(pixel[1]) + y_shift, int(pixel[0]) + x_shift] += pixel[var_idx]
 
         return matrix
 
@@ -310,9 +322,10 @@ class Cluster(object):
         except:
             print("Failed to load cluster from clist.")
         
-
-
-
+    def load_from_pd_row(self, row):
+        self.load_from_string(row["ClusterPixels"])        
+        self.vars = row.drop("ClusterPixels")
+        
     def load_from_string(self, cluster_str):
         if not cluster_str:
             print("[ERROR] Can not load cluster from string because it is empty string.")
