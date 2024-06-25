@@ -9,6 +9,7 @@ import re
 import sys
 import pandas as pd
 import hist1d as ht1d
+from matplotlib.colors import LogNorm
 
 class Pixel(object):
     """init"""
@@ -161,7 +162,7 @@ class Cluster(object):
         print(self.pixels)
         print(self.x_vol, self.y_vol)
 
-    def plot(self, var_idx = 2, fig = None, ax=None, show_plot=True, file_out = ""):
+    def plot(self, var_idx = 2, fig = None, ax=None, show_plot=True, file_out = "", do_log_z=False):
         if not self.pixels:
             raise Exception("Failed to plot cluster. No pixels") 
 
@@ -199,8 +200,12 @@ class Cluster(object):
             binx.append(int(self.x_board_max)+1)
             biny.append(int(self.y_board_max)+1)
 
-            hist = ax.hist2d(x_edges, y_edges, bins=(binx, biny), 
-                        weights=bin_conts, cmap='viridis', cmin = 1.000000)
+            norm = None
+            if do_log_z:
+                norm = LogNorm()
+
+            hist = ax.hist2d(x_edges, y_edges, bins=(binx, biny), norm=norm, 
+                        weights=bin_conts, cmap='Blues', cmin = 1.000000)
 
             #  plot range
             range_x = self.x_board_max - self.x_board_min + 1
@@ -244,6 +249,7 @@ class Cluster(object):
                 plt.show()
 
             return hist, cbar
+
         except Exception as e:
             print(f"[ERROR] Failed to plot cluster: {e}.")
             return None, None
