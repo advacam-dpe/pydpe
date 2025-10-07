@@ -10,7 +10,7 @@ import pandas as pd
 import hist1d as ht1d
 from tqdm import tqdm
 
-from cluster import *
+from .cluster import *
 
 class Clog(object):
     """docstring for Clog"""

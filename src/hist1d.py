@@ -4,7 +4,8 @@ import numpy as np
 import math
 from math import factorial
 import sys
-import fit as ft
+
+from . import fit as ft
 
 class hist1d(object):
      """docstring for hist1d"""

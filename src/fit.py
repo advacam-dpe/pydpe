@@ -16,7 +16,7 @@ import pandas as pd
 from scipy.optimize import curve_fit
 from scipy import special
 
-import hist1d as hs
+from . import hist1d as hs
 
 
 def gauss(x,A,mu,sigma):

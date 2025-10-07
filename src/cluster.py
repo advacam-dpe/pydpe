@@ -1,15 +1,13 @@
-import calib_mat
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-import math
-import os
 from os import path
 import re
-import sys
 import pandas as pd
-import hist1d as ht1d
 from matplotlib.colors import LogNorm
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+from . import calib_mat
+from . import hist1d as ht1d
 
 class Pixel(object):
     """init"""
@@ -205,7 +203,7 @@ class Cluster(object):
                 norm = LogNorm()
 
             hist = ax.hist2d(x_edges, y_edges, bins=(binx, biny), norm=norm, 
-                        weights=bin_conts, cmap='Blues', cmin = 1.000000)
+                        weights=bin_conts, cmap='RdYlBu_r', cmin = 1.000000)
 
             #  plot range
             range_x = self.x_board_max - self.x_board_min + 1
@@ -226,20 +224,19 @@ class Cluster(object):
 
             ax.set_xlim(xmin = x_range_min, xmax = x_range_max)
             ax.set_ylim(ymin = y_range_min, ymax = y_range_max)
+            ax.set_xlabel('X [px]')
+            ax.set_ylabel('Y [px]')
+            ax.set_aspect('equal')
 
-            cbar = fig.colorbar(hist[3], ax=ax)  # hist[3] returns the QuadMesh
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="4%", pad=0.05)
+            cbar = fig.colorbar(hist[3], ax=ax, cax=cax)  # hist[3] returns the QuadMesh
             cbar.set_label('Counts')
-
-            ax.set_xlabel('X [-]')
-            ax.set_ylabel('Y [-]')
-
             if var_idx == 2:
                 if self.is_calibrated():
                     cbar.set_label('Energy [keV]')
                 else:
                     cbar.set_label('ToT [-]')
-
-            ax.set_aspect('equal')
 
             if file_out:
                 pass
@@ -311,7 +308,7 @@ class Cluster(object):
         else:
             plt.show()
     
-    # while loading from clist, {energy, time, size, height, roundness,linearity} are determined   
+    # while loading from .pydpe.src.clist, {energy, time, size, height, roundness,linearity} are determined   
     def load_from_clist_row(self,clist_row):
 
         self.energy = clist_row["E"]
@@ -326,7 +323,7 @@ class Cluster(object):
         try:
             self.load_from_string(cluster_str)
         except:
-            print("Failed to load cluster from clist.")
+            print("Failed to load cluster from .pydpe.src.clist.")
         
     def load_from_pd_row(self, row):
         self.load_from_string(row["ClusterPixels"])        

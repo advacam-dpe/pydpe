@@ -12,7 +12,7 @@ from matplotlib.colors import LogNorm
 import copy
 
 import hist1d as ht1d
-import cluster as cl
+import .pydpe.src.cluster as cl
 
 
 

@@ -11,10 +11,8 @@ from matplotlib.colors import LogNorm
 import copy
 
 
-sys.path.append("src")
-import hist1d as ht1d
-import cluster as cl
-from clist import *  
+import pydpe.src.cluster as cl
+from src.clist import *  
 # import clusterer
 
 
