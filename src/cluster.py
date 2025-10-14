@@ -160,97 +160,133 @@ class Cluster(object):
         print(self.pixels)
         print(self.x_vol, self.y_vol)
 
-    def plot(self, var_idx = 2, fig = None, ax=None, show_plot=True, file_out = "", do_log_z=False):
+    def plot(self, var_idx=2, fig=None, ax=None, show_plot=True, file_out="", do_log_z=False):
+        """
+        Plot cluster as 2D histogram.
+        
+        Args:
+            var_idx: Variable index to plot (2=ToT/Energy, 3=ToA for TPX3)
+            fig: Matplotlib figure (created if None)
+            ax: Matplotlib axes (created if None)
+            show_plot: Whether to display the plot
+            file_out: Output file path (not implemented)
+            do_log_z: Use logarithmic scale for z-axis
+            
+        Returns:
+            tuple: (histogram result, colorbar) or (None, None) on error
+        """
         if not self.pixels:
-            raise Exception("Failed to plot cluster. No pixels") 
-
-        try:
-            pix_dim = 4 if self.pixels[0].is_tpx3() else 3
-
-            if var_idx >= pix_dim or var_idx <= 1:
-                raise Exception("Incorrect varaible index.") 
-
-            if self.pixels_np[0,0] == -1.:
-                self.convert_pixels_to_numpy()
-
-            if self.x_board_min == -1:
-                self.get_border_pixels()    
-
-            binx = list(range(int(self.x_board_min),int(self.x_board_max)+1))
-            biny = list(range(int(self.y_board_min),int(self.y_board_max)+1))
-
-            if self.x_board_min == self.x_board_max:
-                binx = [int(self.x_board_min)]
-            if self.y_board_min == self.y_board_max:
-                biny = [int(self.y_board_min)]
-
-            if fig == None or ax == None:
-                fig, ax = plt.subplots()
-
-            x_edges = self.pixels_np[:, 0].tolist()
-            y_edges = self.pixels_np[:, 1].tolist()
-            bin_conts = self.pixels_np[:, var_idx].tolist()
-
-            x_edges.append(self.x_board_max+1)
-            y_edges.append(self.y_board_max+1)
-            bin_conts.append(0)
-
-            binx.append(int(self.x_board_max)+1)
-            biny.append(int(self.y_board_max)+1)
-
-            norm = None
-            if do_log_z:
-                norm = LogNorm()
-
-            hist = ax.hist2d(x_edges, y_edges, bins=(binx, biny), norm=norm, 
-                        weights=bin_conts, cmap='RdYlBu_r', cmin = 1.000000)
-
-            #  plot range
-            range_x = self.x_board_max - self.x_board_min + 1
-            range_y = self.y_board_max - self.y_board_min + 1
-            range_diff = abs(range_x - range_y)
-
-            x_range_min = self.x_board_min - 1.5
-            x_range_max = self.x_board_max + 1.5
-            y_range_min = self.y_board_min - 1.5
-            y_range_max = self.y_board_max + 1.5
-
-            if range_y > range_x:
-                x_range_min = self.x_board_min - int(range_diff/2.) - 1.5
-                x_range_max = self.x_board_max + int(range_diff/2.) + 1.5                         
-            if range_y < range_x:
-                y_range_min = self.y_board_min - int(range_diff/2.) - 1.5
-                y_range_max = self.y_board_max + int(range_diff/2.) + 1.5             
-
-            ax.set_xlim(xmin = x_range_min, xmax = x_range_max)
-            ax.set_ylim(ymin = y_range_min, ymax = y_range_max)
-            ax.set_xlabel('X [px]')
-            ax.set_ylabel('Y [px]')
-            ax.set_aspect('equal')
-
-            divider = make_axes_locatable(ax)
-            cax = divider.append_axes("right", size="4%", pad=0.05)
-            cbar = fig.colorbar(hist[3], ax=ax, cax=cax)  # hist[3] returns the QuadMesh
+            raise ValueError("Failed to plot cluster. No pixels available.")
+        
+        # Validate variable index
+        pix_dim = 4 if self.pixels[0].is_tpx3() else 3
+        if var_idx >= pix_dim or var_idx < 2:
+            raise ValueError(f"Invalid variable index {var_idx}. Must be 2-{pix_dim-1}.")
+        
+        # Prepare data
+        if self.pixels_np[0, 0] == -1.:
+            self.convert_pixels_to_numpy()
+        
+        if self.x_board_min == -1:
+            self.get_border_pixels()
+        
+        # Create bins
+        binx = list(range(int(self.x_board_min), int(self.x_board_max) + 2))
+        biny = list(range(int(self.y_board_min), int(self.y_board_max) + 2))
+        
+        # Handle single pixel cases
+        if self.x_board_min == self.x_board_max:
+            binx = [int(self.x_board_min), int(self.x_board_min) + 1]
+        if self.y_board_min == self.y_board_max:
+            biny = [int(self.y_board_min), int(self.y_board_min) + 1]
+        
+        # Create figure if needed
+        if fig is None or ax is None:
+            fig, ax = plt.subplots(figsize=(6.5, 5))
+        
+        # Prepare histogram data
+        x_edges = self.pixels_np[:, 0].tolist()
+        y_edges = self.pixels_np[:, 1].tolist()
+        bin_conts = self.pixels_np[:, var_idx].tolist()
+        
+        # Add boundary point
+        x_edges.append(self.x_board_max + 1)
+        y_edges.append(self.y_board_max + 1)
+        bin_conts.append(0)
+        
+        # Set normalization
+        norm = LogNorm() if do_log_z else None
+        
+        # Create histogram
+        hist = ax.hist2d(x_edges, y_edges, bins=(binx, biny), norm=norm,
+                        weights=bin_conts, cmap='RdYlBu_r', cmin=1.0)
+        
+        # Extract histogram data for coordinate formatting
+        counts, xedges_result, yedges_result, image = hist
+        
+        # Custom coordinate formatter
+        def format_coord(x, y):
+            col = int(x + 0.5)
+            row = int(y + 0.5)
+            
+            # Find bin indices
+            x_idx = np.searchsorted(xedges_result, x) - 1
+            y_idx = np.searchsorted(yedges_result, y) - 1
+            
+            if 0 <= x_idx < counts.shape[0] and 0 <= y_idx < counts.shape[1] and not np.isnan(counts[x_idx, y_idx]) :
+                val = counts[x_idx, y_idx]
+                return f'x={col}, y={row}, val={val:.4g}'
+            return f'x={col}, y={row}, val=0'
+        
+        ax.format_coord = format_coord
+        image.format_cursor_data = lambda data: ''  # Disable extra z line
+        
+        # Calculate equal aspect ratio ranges
+        range_x = self.x_board_max - self.x_board_min + 1
+        range_y = self.y_board_max - self.y_board_min + 1
+        range_diff = abs(range_x - range_y)
+        
+        x_range_min = self.x_board_min - 1.5
+        x_range_max = self.x_board_max + 1.5
+        y_range_min = self.y_board_min - 1.5
+        y_range_max = self.y_board_max + 1.5
+        
+        if range_y > range_x:
+            padding = int(range_diff / 2.)
+            x_range_min = self.x_board_min - padding - 1.5
+            x_range_max = self.x_board_max + padding + 1.5
+        elif range_y < range_x:
+            padding = int(range_diff / 2.)
+            y_range_min = self.y_board_min - padding - 1.5
+            y_range_max = self.y_board_max + padding + 1.5
+        
+        # Set plot properties
+        ax.set_xlim(xmin=x_range_min, xmax=x_range_max)
+        ax.set_ylim(ymin=y_range_min, ymax=y_range_max)
+        ax.set_xlabel('X [px]')
+        ax.set_ylabel('Y [px]')
+        ax.set_aspect('equal')
+        
+        # Add colorbar
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="4%", pad=0.05)
+        cbar = fig.colorbar(hist[3], ax=ax, cax=cax)
+        
+        # Set colorbar label based on variable type
+        if var_idx == 2:
+            cbar.set_label('Energy [keV]' if self.is_calibrated() else 'ToT [-]')
+        elif var_idx == 3 and pix_dim == 4:
+            cbar.set_label('ToA [ns]')
+        else:
             cbar.set_label('Counts')
-            if var_idx == 2:
-                if self.is_calibrated():
-                    cbar.set_label('Energy [keV]')
-                else:
-                    cbar.set_label('ToT [-]')
-
-            if file_out:
-                pass
-            elif show_plot:
-                fig = plt.gcf()
-                fig.set_size_inches(6.5,5)            
-                plt.show()
-
-            return hist, cbar
-
-        except Exception as e:
-            print(f"[ERROR] Failed to plot cluster: {e}.")
-            return None, None
-
+        
+        # Handle output
+        if file_out:
+            fig.savefig(file_out, dpi=300, bbox_inches='tight')
+        elif show_plot:
+            plt.show()
+        
+        return hist, cbar
 
     def is_calibrated(self):
 
