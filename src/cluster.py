@@ -9,6 +9,9 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from . import calib_mat
 from . import hist1d as ht1d
 
+PX_IDX_TOT = 2
+PX_IDX_TOA_COUNT = 3
+
 class Pixel(object):
     """init"""
     def __init__(self, x = -1, y = -1, tot = -1, toa = -1, count = -1, index = -1):
@@ -72,6 +75,9 @@ class Cluster(object):
         self.roundness = -1
         self.linearity = -1
         self.edge = -1
+        
+        self.is_dual_mode = None
+        self.is_time_mode = None
 
 
     def add_pixel(self, pixel=None, x=-1, y=-1, tot=-1):
@@ -112,7 +118,7 @@ class Cluster(object):
         except Exception as e:
             print(f"[ERROR] Failed to load cluster pixel np: {e}")
 
-    def convert_pixels_to_matrix(self, var_idx=2, width=256, height=256, do_shift_center=False):
+    def convert_pixels_to_matrix(self, var_idx=PX_IDX_TOT, width=256, height=256, do_shift_center=False):
 
         if self.pixels_np[0,0] == -1:
             self.convert_pixels_to_numpy()
@@ -160,7 +166,7 @@ class Cluster(object):
         print(self.pixels)
         print(self.x_vol, self.y_vol)
 
-    def plot(self, var_idx=2, fig=None, ax=None, show_plot=True, file_out="", do_log_z=False):
+    def plot(self, var_idx=PX_IDX_TOT, fig=None, ax=None, show_plot=True, file_out="", do_log_z=False):
         """
         Plot cluster as 2D histogram.
         
@@ -219,7 +225,7 @@ class Cluster(object):
         
         # Create histogram
         hist = ax.hist2d(x_edges, y_edges, bins=(binx, biny), norm=norm,
-                        weights=bin_conts, cmap='RdYlBu_r', cmin=1.0)
+                        weights=bin_conts, cmap='RdYlBu_r', cmin=0.0001)
         
         # Extract histogram data for coordinate formatting
         counts, xedges_result, yedges_result, image = hist
@@ -276,7 +282,7 @@ class Cluster(object):
         if var_idx == 2:
             cbar.set_label('Energy [keV]' if self.is_calibrated() else 'ToT [-]')
         elif var_idx == 3 and pix_dim == 4:
-            cbar.set_label('ToA [ns]')
+            cbar.set_label('Time [ns]')
         else:
             cbar.set_label('Counts')
         
@@ -380,12 +386,27 @@ class Cluster(object):
                 for pixel in pixels_str:
                     pix = Pixel(x=int(pixel[0]), y=int(pixel[1]), tot=float(pixel[2]))
                     self.add_pixel(pix)
-            elif pixel_dim == 4:                
+            elif pixel_dim == 4:    
+                self.is_dual_mode = True
+                            
                 pattern = r'\[(\d+), (\d+), ([\d.]+), ([\d.]+)\]'
                 pixels_str = re.findall(pattern, cluster_str)
                 
+                # is it toa or count based on float values
+                if self.is_time_mode is None:
+                    n_check = min(10, len(pixels_str))
+                    self.is_time_mode = False
+                    for pixel in pixels_str[:n_check]:
+                        toa_val = pixel[3]
+                        if '.' in toa_val or toa_val == '0':  # crude but effective check for float-like values
+                            self.is_time_mode = True
+                            break                
+                
                 for pixel in pixels_str:
-                    pix = Pixel(x=int(pixel[0]), y=int(pixel[1]), tot=float(pixel[2]), toa=float(pixel[3]))
+                    if self.is_time_mode:
+                        pix = Pixel(x=int(pixel[0]), y=int(pixel[1]), tot=float(pixel[2]), toa=float(pixel[3])+0.001)
+                    else:
+                        pix = Pixel(x=int(pixel[0]), y=int(pixel[1]), tot=float(pixel[2]), count=int(pixel[3]))                        
                     self.add_pixel(pix)
 
             else:
