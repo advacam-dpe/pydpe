@@ -118,36 +118,51 @@ class Cluster(object):
         except Exception as e:
             print(f"[ERROR] Failed to load cluster pixel np: {e}")
 
-    def convert_pixels_to_matrix(self, var_idx=PX_IDX_TOT, width=256, height=256, do_shift_center=False):
-
+    def convert_pixels_to_matrix(self, var_idx=PX_IDX_TOT, width=None, height=None, do_shift_center=False):
         if self.pixels_np[0,0] == -1:
             self.convert_pixels_to_numpy()
-
         if self.pixels_np[0,0] == -1:            
-            print(f"error - can not covert pixels to matrix, because numpy matrix are empty")
+            print("error - can not convert pixels to matrix, because numpy matrix is empty")
             return
-
-        if var_idx > len(self.pixels_np[0]):
-            print(f"error - idx of variable {var_idx} is lager than size of pixel array {len(self.pixels_np[0])}")  
+        if var_idx >= self.pixels_np.shape[1]:
+            print(f"error - idx of variable {var_idx} is larger than size of pixel array {self.pixels_np.shape[1]}")  
             return          
 
-        x_shift = 0
-        y_shift = 0
+        # Ensure board borders are known
+        if self.x_board_max == -1 or self.y_board_max == -1:
+            self.get_border_pixels()
 
-        if do_shift_center:
-            try:
-                x_shift = int(int(width/2.) - self.vars["X"])
-                y_shift = int(int(height/2.) - self.vars["Y"])
-            except Exception as e:
-                print(f"error - can not gen shift x and y for exporting cluster into matrix: {e}" )
+        x_min = 0
+        y_min = 0
 
-        matrix = np.zeros((height, width))
+        # If width or height is None, calculate from board limits
+        if width is None:
+            width = self.x_board_max - self.x_board_min + 1
+            x_min = self.x_board_min -0.5
+        if height is None:
+            height = self.y_board_max - self.y_board_min + 1
+            y_min = self.y_board_min -0.5
 
+        # Shifts are ignored if width/height were computed from board limits
+        if do_shift_center and width is not None and height is not None and "X" in self.vars and "Y" in self.vars:
+            x_shift = int(width / 2. - self.vars["X"])
+            y_shift = int(height / 2. - self.vars["Y"])
+        else:
+            x_shift = 0
+            y_shift = 0
+
+        # Create the matrix
+        
+        matrix = np.zeros((int(height), int(width)))
         for pixel in self.pixels_np:
-
-            matrix[int(pixel[1]) + y_shift, int(pixel[0]) + x_shift] += pixel[var_idx]
+            # Adjust coordinates relative to board min if width/height were auto-calculated
+            x_idx = int(pixel[0]) - x_min + x_shift 
+            y_idx = int(pixel[1]) - y_min + y_shift 
+            if 0 <= x_idx < width and 0 <= y_idx < height:
+                matrix[int(y_idx), int(x_idx)] += pixel[var_idx]
 
         return matrix
+
 
     def get_border_pixels(self):
 
@@ -166,7 +181,7 @@ class Cluster(object):
         print(self.pixels)
         print(self.x_vol, self.y_vol)
 
-    def plot(self, var_idx=PX_IDX_TOT, fig=None, ax=None, show_plot=True, file_out="", do_log_z=False):
+    def plot(self, var_idx=PX_IDX_TOT, fig=None, ax=None, show_plot=True, file_out="", do_log_z=False, cmap_name = "RdYlBu_r"):
         """
         Plot cluster as 2D histogram.
         
@@ -181,91 +196,22 @@ class Cluster(object):
         Returns:
             tuple: (histogram result, colorbar) or (None, None) on error
         """
-        if not self.pixels:
-            raise ValueError("Failed to plot cluster. No pixels available.")
-        
-        # Validate variable index
+
         pix_dim = 4 if self.pixels[0].is_tpx3() else 3
-        if var_idx >= pix_dim or var_idx < 2:
-            raise ValueError(f"Invalid variable index {var_idx}. Must be 2-{pix_dim-1}.")
-        
-        # Prepare data
-        if self.pixels_np[0, 0] == -1.:
-            self.convert_pixels_to_numpy()
-        
-        if self.x_board_min == -1:
-            self.get_border_pixels()
-        
-        # Create bins
-        binx = list(range(int(self.x_board_min), int(self.x_board_max) + 2))
-        biny = list(range(int(self.y_board_min), int(self.y_board_max) + 2))
-        
-        # Handle single pixel cases
-        if self.x_board_min == self.x_board_max:
-            binx = [int(self.x_board_min), int(self.x_board_min) + 1]
-        if self.y_board_min == self.y_board_max:
-            biny = [int(self.y_board_min), int(self.y_board_min) + 1]
-        
+
+        bin_conts, x_edges, y_edges, binx, biny, [[x_range_min, x_range_max], [y_range_min, y_range_max]] = self._prepare_plot(var_idx)
+
         # Create figure if needed
         if fig is None or ax is None:
             fig, ax = plt.subplots(figsize=(6.5, 5))
-        
-        # Prepare histogram data
-        x_edges = self.pixels_np[:, 0].tolist()
-        y_edges = self.pixels_np[:, 1].tolist()
-        bin_conts = self.pixels_np[:, var_idx].tolist()
-        
-        # Add boundary point
-        x_edges.append(self.x_board_max + 1)
-        y_edges.append(self.y_board_max + 1)
-        bin_conts.append(0)
-        
+
         # Set normalization
         norm = LogNorm() if do_log_z else None
         
         # Create histogram
         hist = ax.hist2d(x_edges, y_edges, bins=(binx, biny), norm=norm,
-                        weights=bin_conts, cmap='RdYlBu_r', cmin=0.0001)
-        
-        # Extract histogram data for coordinate formatting
-        counts, xedges_result, yedges_result, image = hist
-        
-        # Custom coordinate formatter
-        def format_coord(x, y):
-            col = int(x + 0.5)
-            row = int(y + 0.5)
-            
-            # Find bin indices
-            x_idx = np.searchsorted(xedges_result, x) - 1
-            y_idx = np.searchsorted(yedges_result, y) - 1
-            
-            if 0 <= x_idx < counts.shape[0] and 0 <= y_idx < counts.shape[1] and not np.isnan(counts[x_idx, y_idx]) :
-                val = counts[x_idx, y_idx]
-                return f'x={col}, y={row}, val={val:.4g}'
-            return f'x={col}, y={row}, val=0'
-        
-        ax.format_coord = format_coord
-        image.format_cursor_data = lambda data: ''  # Disable extra z line
-        
-        # Calculate equal aspect ratio ranges
-        range_x = self.x_board_max - self.x_board_min + 1
-        range_y = self.y_board_max - self.y_board_min + 1
-        range_diff = abs(range_x - range_y)
-        
-        x_range_min = self.x_board_min - 1.5
-        x_range_max = self.x_board_max + 1.5
-        y_range_min = self.y_board_min - 1.5
-        y_range_max = self.y_board_max + 1.5
-        
-        if range_y > range_x:
-            padding = int(range_diff / 2.)
-            x_range_min = self.x_board_min - padding - 1.5
-            x_range_max = self.x_board_max + padding + 1.5
-        elif range_y < range_x:
-            padding = int(range_diff / 2.)
-            y_range_min = self.y_board_min - padding - 1.5
-            y_range_max = self.y_board_max + padding + 1.5
-        
+                        weights=bin_conts, cmap=cmap_name, cmin=0.0001)
+                
         # Set plot properties
         ax.set_xlim(xmin=x_range_min, xmax=x_range_max)
         ax.set_ylim(ymin=y_range_min, ymax=y_range_max)
@@ -293,6 +239,60 @@ class Cluster(object):
             plt.show()
         
         return hist, cbar
+
+    def _prepare_plot(self, var_idx=PX_IDX_TOT):
+        
+        pix_dim = 4 if self.pixels[0].is_tpx3() else 3
+        if var_idx >= pix_dim or var_idx < 2:
+            raise ValueError(f"Invalid variable index {var_idx}. Must be 2-{pix_dim-1}.")
+        
+        # Prepare data
+        if self.pixels_np[0, 0] == -1.:
+            self.convert_pixels_to_numpy()
+        
+        if self.x_board_min == -1:
+            self.get_border_pixels()
+        
+        # Create bins
+        binx = list(range(int(self.x_board_min), int(self.x_board_max) + 2))
+        biny = list(range(int(self.y_board_min), int(self.y_board_max) + 2))
+        
+        # Handle single pixel cases
+        if self.x_board_min == self.x_board_max:
+            binx = [int(self.x_board_min), int(self.x_board_min) + 1]
+        if self.y_board_min == self.y_board_max:
+            biny = [int(self.y_board_min), int(self.y_board_min) + 1]
+        
+        # Prepare histogram data
+        x_edges = self.pixels_np[:, 0].tolist()
+        y_edges = self.pixels_np[:, 1].tolist()
+        bin_conts = self.pixels_np[:, var_idx].tolist()
+        
+        # Add boundary point
+        x_edges.append(self.x_board_max + 1)
+        y_edges.append(self.y_board_max + 1)
+        bin_conts.append(0)      
+        
+        # Calculate equal aspect ratio ranges
+        range_x = self.x_board_max - self.x_board_min + 1
+        range_y = self.y_board_max - self.y_board_min + 1
+        range_diff = abs(range_x - range_y)
+        
+        x_range_min = self.x_board_min - 1.5
+        x_range_max = self.x_board_max + 1.5
+        y_range_min = self.y_board_min - 1.5
+        y_range_max = self.y_board_max + 1.5
+        
+        if range_y > range_x:
+            padding = int(range_diff / 2.)
+            x_range_min = self.x_board_min - padding - 1.5
+            x_range_max = self.x_board_max + padding + 1.5
+        elif range_y < range_x:
+            padding = int(range_diff / 2.)
+            y_range_min = self.y_board_min - padding - 1.5
+            y_range_max = self.y_board_max + padding + 1.5
+                
+        return   bin_conts, x_edges, y_edges, binx, biny, [[x_range_min, x_range_max], [y_range_min, y_range_max]]
 
     def is_calibrated(self):
 
