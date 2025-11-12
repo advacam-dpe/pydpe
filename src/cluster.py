@@ -212,6 +212,8 @@ class Cluster(object):
         hist = ax.hist2d(x_edges, y_edges, bins=(binx, biny), norm=norm,
                         weights=bin_conts, cmap=cmap_name, cmin=0.0001)
                 
+        counts, xedges_result, yedges_result, image = hist
+                
         # Set plot properties
         ax.set_xlim(xmin=x_range_min, xmax=x_range_max)
         ax.set_ylim(ymin=y_range_min, ymax=y_range_max)
@@ -223,6 +225,22 @@ class Cluster(object):
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="4%", pad=0.05)
         cbar = fig.colorbar(hist[3], ax=ax, cax=cax)
+        
+
+        # Custom coordinate formatter
+        def format_coord(x, y):
+            col = int(x + 0.5)
+            row = int(y + 0.5)
+            
+            x_idx = np.searchsorted(xedges_result, x) - 1
+            y_idx = np.searchsorted(yedges_result, y) - 1
+            
+            if 0 <= x_idx < counts.shape[0] and 0 <= y_idx < counts.shape[1] and not np.isnan(counts[x_idx, y_idx]) :
+                val = counts[x_idx, y_idx]
+                return f'x={col}, y={row}, val={val:.4g}'
+            return f'x={col}, y={row}, val=0'
+        ax.format_coord = format_coord
+        image.format_cursor_data = lambda data: ''  # Disable extra z line    
         
         # Set colorbar label based on variable type
         if var_idx == 2:
