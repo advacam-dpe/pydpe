@@ -149,7 +149,7 @@ class Clist(object):
 
         unit_x = " "
         try:
-            unit_x += f"[{self.var_units[list(self.var_keys).index(var_key)]}]"
+            unit_x += f"[{self.var_units[self.var_keys.index(var_key)]}]"
         except:
             pass
         ax.set_xlabel(var_key + unit_x, fontsize=10)
@@ -200,8 +200,8 @@ class Clist(object):
         unit_y = " "
 
         try:
-            unit_x += f"[{self.var_units[list(self.var_keys).index(var_key_x)]}]"
-            unit_y += f"[{self.var_units[list(self.var_keys).index(var_key_y)]}]"
+            unit_x += f"[{self.var_units[self.var_keys.index(var_key_x)]}]"
+            unit_y += f"[{self.var_units[self.var_keys.index(var_key_y)]}]"
         except:
             pass
 
@@ -209,7 +209,6 @@ class Clist(object):
         ax.set_ylabel(var_key_y + unit_y)
 
         if do_show:
-            cbar = plt.colorbar(hist2d[3], ax=ax)            
             plt.show()
 
         return hist2d, cbar
@@ -245,7 +244,6 @@ class Clist(object):
         cbar = plt.colorbar(hist[3], ax=ax)
 
         if do_show:
-            cbar = plt.colorbar(hist[3], ax=ax)
             plt.show()
 
         return cbar
@@ -270,7 +268,7 @@ class Clist(object):
             data_rand = self.data.sample(frac=1).reset_index(drop=True)
 
         if keep_data:
-            data = data_rand
+            self.data = data_rand
         return data_rand
 
     def analyse_coincidence(self):
@@ -279,7 +277,6 @@ class Clist(object):
         coinc_clm[0] = 0
 
         t_coinc = 100     #ns
-        t_curr = -1
         t_main = self.data.loc[0, "T"] + t_coinc + 1
         coinc_id_curr = 0
 
@@ -288,20 +285,20 @@ class Clist(object):
         if "EventID" in self.var_keys:
             do_comp = True
 
-        for index, row in self.data.iterrows():
-            if index == 0:
-                continue
+        # use numpy arrays instead of iterrows(): avoids constructing a pandas
+        # Series for every row, which dominates the cost of this loop
+        t_values = self.data.iloc[:, 5].to_numpy()
+        event_ids = self.data.iloc[:, 1].to_numpy() if do_comp else None
 
-            t_curr = row[5]
+        for index in range(1, self.nrow):
+            t_curr = t_values[index]
             if t_curr - t_main > t_coinc:
                 coinc_id_curr += 1
                 t_main = t_curr
-            
-            # print(index, t_curr, t_main, coinc_id_curr, int(row[1]), coinc_id_curr - int(row[1]))
 
-            if do_comp and coinc_id_curr - int(row[1]) != 0:
-                break
+            if do_comp and coinc_id_curr - int(event_ids[index]) != 0:
                 correct = False
+                break
 
             coinc_clm[index] = coinc_id_curr
 

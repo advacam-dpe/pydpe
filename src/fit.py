@@ -1,6 +1,4 @@
 
-import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 import math
 import os
@@ -10,8 +8,6 @@ import sys
 import time
 import multiprocessing
 import subprocess
-import matplotlib
-import matplotlib.pyplot as plt
 import pandas as pd
 from scipy.optimize import curve_fit
 from scipy import special
@@ -113,6 +109,10 @@ def fit_gerfc(x, y, A1 = None, A2 = None, mu = None, sigma = None, x_range = [-1
 
 
 if __name__ == '__main__':
+
+	# imported only here (not module level) - matplotlib is not needed by the
+	# fit functions themselves and would otherwise be loaded by every spawned worker process
+	import matplotlib.pyplot as plt
 
 	n_points = 10000
 	mu, sigma = 50, 10 
